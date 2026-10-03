@@ -1,0 +1,67 @@
+# SefiTeam
+
+Sistema de formação de grupos da **SEFITEL** (Seminário de Física do Inatel).
+
+O professor (admin) cria uma **edição** da feira e faz upload de uma planilha com os alunos de cada **Física**. Os alunos recebem acesso ao sistema e, até a data limite, precisam **criar ou entrar em um grupo** em cada Física em que estão inscritos.
+
+> Versão 2: reescrita do zero em TypeScript.
+
+## Regras de negócio
+
+- Apenas **uma edição ativa** por vez; as anteriores ficam como histórico.
+- Uma edição tem várias **Físicas** (F01, F02, F03...), definidas pela planilha (uma aba por Física).
+- Cada Física tem sua configuração: quantidade de grupos, mínimo e máximo de integrantes e **multiturma**.
+- O **prazo** para formar grupos é único por edição e vale para todas as Físicas.
+- Um aluno pode estar em várias Físicas, mas em **uma única turma** por Física.
+- Um aluno pode estar em **um único grupo** por Física.
+- Multiturma desligado: o grupo só aceita alunos da mesma turma (ex.: só F01-A). Ligado: aceita turmas diferentes da mesma Física (F01-A com F01-B).
+- Um grupo está **formado** quando atinge o mínimo de integrantes. Ele continua aceitando alunos até o máximo.
+- Após o prazo, o aluno não altera mais o grupo; o admin pode adicionar/remover alunos e apagar grupos.
+- **Dúvidas Frequentes** são globais e editadas pelo admin.
+- Login do aluno: `curso + matrícula` (ex.: `GES589`); senha inicial: a matrícula.
+
+## Stack
+
+| Parte                | Tecnologias                                    |
+| -------------------- | ---------------------------------------------- |
+| Back-end (`back/`)   | Node.js, TypeScript, Fastify, Prisma           |
+| Front-end (`front/`) | React, TypeScript, Vite, React Router          |
+| Banco de dados       | PostgreSQL (Docker Compose em desenvolvimento) |
+
+## Estrutura
+
+```
+.
+├── back/                # API (Fastify + Prisma)
+├── front/               # SPA (Vite + React)
+├── docs/
+│   └── modelo-banco.md  # Modelo de dados e regras
+└── docker-compose.yml   # PostgreSQL para desenvolvimento
+```
+
+`back/` e `front/` são projetos independentes, cada um com seu próprio `package.json`.
+
+## Rodando localmente
+
+Pré-requisitos: Node.js (LTS) e Docker.
+
+```bash
+# 1. Subir o banco
+docker compose up -d
+
+# 2. Back-end
+cd back
+cp .env.example .env
+# instruções completas em back/README.md
+
+# 3. Front-end
+cd front
+# instruções completas em front/README.md
+```
+
+## Documentação
+
+- [Modelo do banco de dados](docs/modelo-banco.md)
+- [Back-end](back/README.md)
+- [Front-end](front/README.md)
+- [Design no Figma](https://www.figma.com/design/I1xx6CkhTr5MQHD0WsgLb7/Sefiteam)

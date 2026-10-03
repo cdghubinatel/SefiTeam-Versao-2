@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16
+    container_name: sefiteam-db
+    environment:
+      POSTGRES_USER: sefiteam
+      POSTGRES_PASSWORD: sefiteam
+      POSTGRES_DB: sefiteam
+    ports:
+      - "5432:5432"
+    volumes:
+      - sefiteam-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sefiteam -d sefiteam"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  sefiteam-db-data:
