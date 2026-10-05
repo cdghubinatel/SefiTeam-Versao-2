@@ -1,0 +1,56 @@
+name: Back-end CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'back/**'
+      - '.github/workflows/back-ci.yml'
+  pull_request:
+    paths:
+      - 'back/**'
+      - '.github/workflows/back-ci.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: back-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    name: Lint, tipos, testes e build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        working-directory: back
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: back/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Formatação (Prettier)
+        run: npm run format:check
+
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Tipos (tsc)
+        run: npm run typecheck
+
+      - name: Testes (Jest)
+        run: npm test -- --ci
+
+      - name: Build
+        run: npm run build
