@@ -45,8 +45,12 @@ Autenticação e permissões: [docs/autenticacao.md](../docs/autenticacao.md).
 ## Rodando
 
 ```bash
+docker compose up -d     # na raiz do repositório: sobe o PostgreSQL
+cd back
 cp .env.example .env
-npm install
+npm install              # também gera o Prisma Client (postinstall)
+npm run db:migrate       # aplica as migrations no banco local
+npm run db:seed          # cria o admin (ADMIN_LOGIN / ADMIN_SENHA)
 npm run dev
 ```
 
@@ -71,16 +75,27 @@ Copie `.env.example` para `.env`. As variáveis são validadas ao iniciar (`src/
 
 ## Scripts
 
-| Script                   | Descrição                                        |
-| ------------------------ | ------------------------------------------------ |
-| `npm run dev`            | Sobe a API em modo desenvolvimento (watch)       |
-| `npm run build`          | Compila para JavaScript em `dist/`               |
-| `npm start`              | Roda a versão compilada                          |
-| `npm run typecheck`      | Checa os tipos sem gerar arquivos                |
-| `npm run lint`           | ESLint (`lint:fix` corrige o que for possível)   |
-| `npm run format`         | Formata com Prettier (`format:check` só confere) |
-| `npm test`               | Roda os testes (`test:watch`, `test:coverage`)   |
-| `npx prisma migrate dev` | Aplica as migrations no banco local              |
+| Script                | Descrição                                        |
+| --------------------- | ------------------------------------------------ |
+| `npm run dev`         | Sobe a API em modo desenvolvimento (watch)       |
+| `npm run build`       | Compila para JavaScript em `dist/`               |
+| `npm start`           | Roda a versão compilada                          |
+| `npm run typecheck`   | Checa os tipos sem gerar arquivos                |
+| `npm run lint`        | ESLint (`lint:fix` corrige o que for possível)   |
+| `npm run format`      | Formata com Prettier (`format:check` só confere) |
+| `npm test`            | Roda os testes (`test:watch`, `test:coverage`)   |
+| `npm run db:generate` | Gera o Prisma Client em `src/generated/`         |
+| `npm run db:migrate`  | Cria/aplica migrations no banco local (dev)      |
+| `npm run db:deploy`   | Aplica migrations pendentes (CI/produção)        |
+| `npm run db:seed`     | Cria ou atualiza o admin                         |
+| `npm run db:studio`   | Abre o Prisma Studio                             |
+
+## Banco de dados
+
+- Configuração do Prisma em `prisma.config.ts` (o Prisma 7 não lê o `.env` sozinho; o arquivo carrega o `.env` quando ele existe).
+- O Prisma Client é gerado em `src/generated/prisma` (fora do Git) e conecta via driver adapter `@prisma/adapter-pg`.
+- O índice único parcial de `edicao` usa o preview `partialIndexes` direto no schema.
+- `CHECK(minimo_integrantes <= maximo_integrantes)` foi escrito à mão na migration inicial, porque o Prisma não suporta CHECK no schema. Ao gerar novas migrations, confira se o Prisma não tentou removê-lo.
 
 ## Testes
 
