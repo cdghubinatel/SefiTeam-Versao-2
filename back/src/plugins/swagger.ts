@@ -3,6 +3,8 @@ import fastifySwaggerUi from '@fastify/swagger-ui';
 import fp from 'fastify-plugin';
 import { jsonSchemaTransform } from 'fastify-type-provider-zod';
 
+export const SWAGGER_PREFIXO = '/docs';
+
 export default fp(
   async (app) => {
     await app.register(fastifySwagger, {
@@ -22,7 +24,7 @@ export default fp(
       transform: jsonSchemaTransform,
     });
 
-    await app.register(fastifySwaggerUi, { routePrefix: '/docs' });
+    await app.register(fastifySwaggerUi, { routePrefix: SWAGGER_PREFIXO });
   },
   { name: 'swagger' },
 );
