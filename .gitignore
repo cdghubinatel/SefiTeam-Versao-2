@@ -5,6 +5,9 @@ node_modules/
 dist/
 build/
 
+# Código gerado (Prisma Client: npm run db:generate)
+back/src/generated/
+
 # Ambiente
 .env
 .env.*
