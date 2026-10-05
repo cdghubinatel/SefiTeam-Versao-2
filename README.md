@@ -18,7 +18,7 @@ O professor (admin) cria uma **edição** da feira e faz upload de uma planilha 
 - Um grupo está **formado** quando atinge o mínimo de integrantes. Ele continua aceitando alunos até o máximo.
 - Após o prazo, o aluno não altera mais o grupo; o admin pode adicionar/remover alunos e apagar grupos.
 - **Dúvidas Frequentes** são globais e editadas pelo admin.
-- Login do aluno: `curso + matrícula` (ex.: `GES589`); senha inicial: a matrícula.
+- Login do aluno: `curso + matrícula` (ex.: `GES589`). A senha é gerada aleatoriamente e enviada para o e-mail do aluno, que vem da planilha. O aluno não troca a senha; se esquecer, pede uma nova na tela de login ou o admin reenvia. Detalhes em [docs/autenticacao.md](docs/autenticacao.md).
 
 ## Stack
 

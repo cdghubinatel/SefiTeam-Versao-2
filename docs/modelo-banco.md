@@ -20,11 +20,11 @@ erDiagram
         string login UK
         string senha_hash
         string nome
-        string email
+        string email "nullable; obrigatório para aluno"
         enum papel "ADMIN | ALUNO"
         string curso "nullable, só aluno"
         string matricula "nullable, só aluno"
-        bool deve_trocar_senha
+        int token_versao
         timestamptz criado_em
         timestamptz atualizado_em
     }
@@ -82,8 +82,9 @@ erDiagram
 Admins e alunos numa única tabela, diferenciados por `papel`.
 
 - `login` é único. Para alunos: `curso + matrícula` (ex.: `GES589`).
-- `senha_hash`: nunca guardar a senha em texto. Senha inicial do aluno = matrícula.
-- `deve_trocar_senha`: força a troca no primeiro acesso (prepara a futura senha personalizada enviada por e-mail).
+- `senha_hash`: hash argon2, nunca a senha em texto. A senha do aluno é gerada aleatoriamente e enviada por e-mail (ver [autenticacao.md](autenticacao.md)).
+- `email`: vem da planilha de upload. Obrigatório para alunos (validado na aplicação), opcional para o admin.
+- `token_versao`: vai dentro do token. Incrementar invalida todos os tokens já emitidos (logout, nova senha).
 - `UNIQUE(curso, matricula)`: o aluno é uma pessoa única, reaproveitada entre edições.
 
 ### `edicao`
@@ -142,5 +143,4 @@ Validadas no back-end, dentro de uma transação com lock no grupo:
 
 ## Futuro (fora do escopo atual)
 
-- Tabela de token para redefinição de senha / envio de senha por e-mail.
 - Nome ou tema opcional em `grupo`.
