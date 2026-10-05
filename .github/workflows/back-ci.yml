@@ -28,6 +28,10 @@ jobs:
       run:
         working-directory: back
 
+    env:
+      # Necessário para o prisma.config.ts (o `prisma generate` roda no postinstall).
+      DATABASE_URL: postgresql://sefiteam:sefiteam@127.0.0.1:5432/sefiteam_test?schema=public
+
     steps:
       - uses: actions/checkout@v7
 

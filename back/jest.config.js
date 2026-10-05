@@ -5,6 +5,8 @@ module.exports = {
   roots: ['<rootDir>/src'],
   testMatch: ['**/*.test.ts'],
   setupFiles: ['<rootDir>/jest.setup.js'],
-  collectCoverageFrom: ['src/**/*.ts', '!src/**/*.test.ts', '!src/server.ts'],
+  // O Prisma Client gerado importa com extensão .js (padrão nodenext); no Jest, resolve para o .ts.
+  moduleNameMapper: { '^(\\.{1,2}/.*)\\.js$': '$1' },
+  collectCoverageFrom: ['src/**/*.ts', '!src/**/*.test.ts', '!src/server.ts', '!src/generated/**'],
   clearMocks: true,
 };

@@ -122,7 +122,7 @@ O aluno numa Física: uma linha para cada aba da planilha em que ele aparece.
 - `UNIQUE(aluno_id, fisica_id)`: uma turma por Física por aluno.
 - `grupo_id` fica aqui, então o aluno tem no máximo um grupo por Física.
 - FK composta `(turma_id, fisica_id) → turma(id, fisica_id)`: a turma é da mesma Física.
-- FK composta `(grupo_id, fisica_id) → grupo(id, fisica_id)`: o grupo é da mesma Física.
+- FK composta `(grupo_id, fisica_id) → grupo(id, fisica_id)`: o grupo é da mesma Física. É `ON DELETE RESTRICT`, porque um `SET NULL` também anularia `fisica_id`, que é obrigatória. Para apagar um grupo, o service primeiro desvincula os integrantes (`grupo_id = NULL`) e depois apaga o grupo, na mesma transação.
 - O vínculo aluno ↔ edição é derivado: `inscricao → fisica → edicao`.
 
 ### `duvida_frequente`

@@ -1,0 +1,2 @@
+# Força LF em todos os sistemas (o Prettier exige LF; evita CRLF com core.autocrlf=true no Windows)
+* text=auto eol=lf

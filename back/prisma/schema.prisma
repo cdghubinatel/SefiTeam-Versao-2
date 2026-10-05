@@ -1,0 +1,132 @@
+// Modelo documentado em docs/modelo-banco.md.
+// Tabelas e colunas em português, snake_case (@@map / @map); no código, camelCase.
+
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  moduleFormat    = "cjs"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Papel {
+  ADMIN
+  ALUNO
+
+  @@map("papel")
+}
+
+model Usuario {
+  id              Int      @id @default(autoincrement())
+  login           String   @unique
+  senhaHash       String   @map("senha_hash")
+  nome            String
+  email           String?
+  papel           Papel
+  curso           String?
+  matricula       String?
+  deveTrocarSenha Boolean  @default(false) @map("deve_trocar_senha")
+  criadoEm        DateTime @default(now()) @map("criado_em") @db.Timestamptz
+  atualizadoEm    DateTime @updatedAt @map("atualizado_em") @db.Timestamptz
+
+  inscricoes    Inscricao[]
+  gruposCriados Grupo[]
+
+  @@unique([curso, matricula])
+  @@map("usuario")
+}
+
+model Edicao {
+  id         Int      @id @default(autoincrement())
+  semestre   String   @unique
+  dataLimite DateTime @map("data_limite") @db.Timestamptz
+  ativa      Boolean  @default(false)
+  criadoEm   DateTime @default(now()) @map("criado_em") @db.Timestamptz
+
+  fisicas Fisica[]
+
+  // Apenas uma edição ativa por vez.
+  @@unique([ativa], map: "edicao_unica_ativa", where: raw("ativa = true"))
+  @@map("edicao")
+}
+
+model Fisica {
+  id                Int     @id @default(autoincrement())
+  edicaoId          Int     @map("edicao_id")
+  codigo            String
+  nome              String
+  quantidadeGrupos  Int     @map("quantidade_grupos")
+  minimoIntegrantes Int     @map("minimo_integrantes")
+  maximoIntegrantes Int     @map("maximo_integrantes")
+  multiturma        Boolean @default(false)
+
+  edicao     Edicao      @relation(fields: [edicaoId], references: [id], onDelete: Cascade)
+  turmas     Turma[]
+  grupos     Grupo[]
+  inscricoes Inscricao[]
+
+  @@unique([edicaoId, codigo])
+  @@map("fisica")
+}
+
+model Turma {
+  id       Int    @id @default(autoincrement())
+  fisicaId Int    @map("fisica_id")
+  codigo   String
+
+  fisica     Fisica      @relation(fields: [fisicaId], references: [id], onDelete: Cascade)
+  inscricoes Inscricao[]
+
+  @@unique([fisicaId, codigo])
+  @@unique([id, fisicaId])
+  @@map("turma")
+}
+
+model Grupo {
+  id          Int      @id @default(autoincrement())
+  fisicaId    Int      @map("fisica_id")
+  numero      Int
+  criadoPorId Int?     @map("criado_por_id")
+  criadoEm    DateTime @default(now()) @map("criado_em") @db.Timestamptz
+
+  fisica      Fisica      @relation(fields: [fisicaId], references: [id], onDelete: Cascade)
+  criadoPor   Usuario?    @relation(fields: [criadoPorId], references: [id], onDelete: SetNull)
+  integrantes Inscricao[]
+
+  @@unique([fisicaId, numero])
+  @@unique([id, fisicaId])
+  @@map("grupo")
+}
+
+model Inscricao {
+  id              Int       @id @default(autoincrement())
+  alunoId         Int       @map("aluno_id")
+  fisicaId        Int       @map("fisica_id")
+  turmaId         Int       @map("turma_id")
+  grupoId         Int?      @map("grupo_id")
+  entrouNoGrupoEm DateTime? @map("entrou_no_grupo_em") @db.Timestamptz
+
+  aluno  Usuario @relation(fields: [alunoId], references: [id], onDelete: Cascade)
+  fisica Fisica  @relation(fields: [fisicaId], references: [id], onDelete: Cascade)
+  // FKs compostas: a turma e o grupo precisam ser da mesma Física da inscrição.
+  turma  Turma   @relation(fields: [turmaId, fisicaId], references: [id, fisicaId], onDelete: Cascade)
+  grupo  Grupo?  @relation(fields: [grupoId, fisicaId], references: [id, fisicaId], onDelete: Restrict)
+
+  @@unique([alunoId, fisicaId])
+  @@index([grupoId])
+  @@map("inscricao")
+}
+
+model DuvidaFrequente {
+  id           Int      @id @default(autoincrement())
+  pergunta     String   @db.Text
+  resposta     String   @db.Text
+  ordem        Int
+  criadoEm     DateTime @default(now()) @map("criado_em") @db.Timestamptz
+  atualizadoEm DateTime @updatedAt @map("atualizado_em") @db.Timestamptz
+
+  @@map("duvida_frequente")
+}

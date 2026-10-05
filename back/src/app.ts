@@ -8,6 +8,7 @@ import {
 } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { env } from './config/env';
+import prisma from './plugins/prisma';
 import swagger from './plugins/swagger';
 
 export async function buildApp(opcoes: FastifyServerOptions = {}) {
@@ -18,6 +19,7 @@ export async function buildApp(opcoes: FastifyServerOptions = {}) {
 
   await app.register(helmet);
   await app.register(cors, { origin: env.CORS_ORIGIN });
+  await app.register(prisma);
 
   if (env.SWAGGER_ENABLED) {
     await app.register(swagger);
