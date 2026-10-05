@@ -4,7 +4,7 @@
 generator client {
   provider        = "prisma-client"
   output          = "../src/generated/prisma"
-  moduleFormat    = "cjs"
+  moduleFormat    = "esm"
   previewFeatures = ["partialIndexes"]
 }
 
@@ -20,17 +20,18 @@ enum Papel {
 }
 
 model Usuario {
-  id              Int      @id @default(autoincrement())
-  login           String   @unique
-  senhaHash       String   @map("senha_hash")
-  nome            String
-  email           String?
-  papel           Papel
-  curso           String?
-  matricula       String?
-  deveTrocarSenha Boolean  @default(false) @map("deve_trocar_senha")
-  criadoEm        DateTime @default(now()) @map("criado_em") @db.Timestamptz
-  atualizadoEm    DateTime @updatedAt @map("atualizado_em") @db.Timestamptz
+  id           Int      @id @default(autoincrement())
+  login        String   @unique
+  senhaHash    String   @map("senha_hash")
+  nome         String
+  email        String?
+  papel        Papel
+  curso        String?
+  matricula    String?
+  /// Vai no token; incrementar invalida todos os tokens já emitidos (logout, nova senha).
+  tokenVersao  Int      @default(0) @map("token_versao")
+  criadoEm     DateTime @default(now()) @map("criado_em") @db.Timestamptz
+  atualizadoEm DateTime @updatedAt @map("atualizado_em") @db.Timestamptz
 
   inscricoes    Inscricao[]
   gruposCriados Grupo[]
