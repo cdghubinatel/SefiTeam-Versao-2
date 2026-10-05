@@ -35,7 +35,8 @@ O professor (admin) cria uma **edição** da feira e faz upload de uma planilha 
 ├── back/                # API (Fastify + Prisma)
 ├── front/               # SPA (Vite + React)
 ├── docs/
-│   └── modelo-banco.md  # Modelo de dados e regras
+│   ├── modelo-banco.md  # Modelo de dados e regras
+│   └── autenticacao.md  # Login, token e permissões
 └── docker-compose.yml   # PostgreSQL para desenvolvimento
 ```
 
@@ -62,6 +63,7 @@ cd front
 ## Documentação
 
 - [Modelo do banco de dados](docs/modelo-banco.md)
+- [Autenticação e autorização](docs/autenticacao.md)
 - [Back-end](back/README.md)
 - [Front-end](front/README.md)
 - [Design no Figma](https://www.figma.com/design/I1xx6CkhTr5MQHD0WsgLb7/Sefiteam)
