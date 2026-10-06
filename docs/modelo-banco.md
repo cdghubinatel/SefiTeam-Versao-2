@@ -128,7 +128,7 @@ O aluno numa Física: uma linha para cada aba da planilha em que ele aparece.
 
 ### `duvida_frequente`
 
-Global (sem vínculo com edição). `ordem` define a ordem de exibição.
+Global (sem vínculo com edição). `ordem` define a ordem de exibição; não é única, e o `id` desempata. Regras e rotas em [duvidas-frequentes.md](duvidas-frequentes.md).
 
 ## Regras validadas na aplicação
 

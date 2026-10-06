@@ -10,6 +10,7 @@ import {
 import { z } from 'zod';
 import { env } from './config/env.js';
 import { authRoutes } from './modules/auth/routes.js';
+import { duvidasRoutes } from './modules/duvidas/routes.js';
 import auth from './plugins/auth.js';
 import prisma from './plugins/prisma.js';
 import swagger from './plugins/swagger.js';
@@ -62,6 +63,7 @@ export async function buildApp(opcoes: FastifyServerOptions = {}) {
   );
 
   await app.register(authRoutes, { prefix: '/auth' });
+  await app.register(duvidasRoutes, { prefix: '/duvidas' });
 
   return app;
 }

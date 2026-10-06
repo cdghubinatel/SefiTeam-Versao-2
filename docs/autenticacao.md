@@ -110,7 +110,8 @@ Todos os erros da API seguem o mesmo formato:
 | 429    | `MUITAS_TENTATIVAS`     | Rate limit do login excedido                                         | Pede para aguardar e tentar de novo    |
 | 400    | `VALIDACAO`             | Corpo/parâmetros inválidos (lista em `detalhes`)                     | Mostra o erro no campo indicado        |
 | 4xx    | `REQUISICAO_INVALIDA`   | Requisição malformada (ex.: JSON quebrado)                           | Mensagem genérica de erro              |
-| 404    | `NAO_ENCONTRADO`        | Rota inexistente                                                     | —                                      |
+| 404    | `NAO_ENCONTRADO`        | Rota inexistente, ou recurso inexistente (ex.: dúvida apagada)       | Mostra a mensagem e recarrega a lista  |
+| 409    | `ORDEM_DESATUALIZADA`   | Reordenar dúvidas com uma lista que não bate com a do banco          | Avisa e recarrega a lista              |
 | 500    | `ERRO_INTERNO`          | Erro inesperado (detalhes só no log do servidor)                     | Mensagem genérica de erro              |
 
 Em `VALIDACAO`, `detalhes` traz `[{ "campo": "login", "mensagem": "..." }]`.
@@ -165,6 +166,8 @@ Nos dois casos: gera uma nova senha aleatória, envia por e-mail e incrementa `t
 
 - Existe **um único** admin, criado pelo seed do Prisma a partir de `ADMIN_LOGIN` e `ADMIN_SENHA` (`.env`).
 - O seed é idempotente: rodar de novo não duplica o admin.
+- **O admin não troca a senha pelo sistema** (decisão desta primeira versão). A única forma é mudar `ADMIN_SENHA` no `.env` e rodar `npm run db:seed` de novo, o que atualiza o hash.
+- Limitação conhecida: o seed **não** incrementa `token_versao`, então tokens do admin emitidos antes da troca continuam válidos até expirar (`JWT_EXPIRES_IN`). Se a troca de senha do admin entrar no sistema, ela deve incrementar `token_versao`, como acontece na recuperação de senha do aluno.
 
 ## Swagger
 
