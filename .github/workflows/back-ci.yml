@@ -24,12 +24,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
+    # Banco descartável para os testes de integração (criado e destruído a cada execução).
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: sefiteam
+          POSTGRES_PASSWORD: sefiteam
+          POSTGRES_DB: sefiteam_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sefiteam -d sefiteam_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     defaults:
       run:
         working-directory: back
 
     env:
-      # Necessário para o prisma.config.ts (o `prisma generate` roda no postinstall).
+      # Banco de teste (service acima). As migrations são aplicadas pelo vitest.global-setup.ts.
       DATABASE_URL: postgresql://sefiteam:sefiteam@127.0.0.1:5432/sefiteam_test?schema=public
 
     steps:
@@ -53,8 +69,8 @@ jobs:
       - name: Tipos (tsc)
         run: npm run typecheck
 
-      - name: Testes (Jest)
-        run: npm test -- --ci
+      - name: Testes (Vitest)
+        run: npm test
 
       - name: Build
         run: npm run build

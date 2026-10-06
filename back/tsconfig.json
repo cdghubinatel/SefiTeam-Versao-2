@@ -13,9 +13,10 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "verbatimModuleSyntax": true,
     "skipLibCheck": true,
     "sourceMap": true,
-    "types": ["node", "jest"]
+    "types": ["node"]
   },
   "include": ["src", "prisma", "*.ts"],
   "exclude": ["node_modules", "dist"]

@@ -1,5 +1,6 @@
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import { buildApp } from './app';
+import { buildApp } from './app.js';
 
 describe('GET /health', () => {
   let app: FastifyInstance;

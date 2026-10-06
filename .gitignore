@@ -5,6 +5,9 @@ node_modules/
 dist/
 build/
 
+# Relatório de cobertura de testes
+coverage/
+
 # Código gerado (Prisma Client: npm run db:generate)
 back/src/generated/
 

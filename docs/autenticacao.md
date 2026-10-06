@@ -24,7 +24,7 @@ sequenceDiagram
         Note over F: apaga o token e vai para /login
     else token válido
         H->>DB: busca usuário pelo id (sub)
-        alt usuário não existe
+        alt usuário não existe ou token revogado (versao ≠ token_versao)
             H-->>F: 401
         else papel não permitido na rota
             H-->>F: 403
@@ -39,8 +39,16 @@ sequenceDiagram
 ## Token
 
 - JWT assinado com `JWT_SECRET` (HS256), via `@fastify/jwt`.
-- Payload: `{ sub: <id do usuário>, papel: "ADMIN" | "ALUNO" }`.
+- Payload: `{ sub: <id do usuário>, papel: "ADMIN" | "ALUNO", versao: <usuario.token_versao> }`.
 - Validade: `JWT_EXPIRES_IN` (padrão `8h`). Não existe refresh token: quando o token expira, o usuário faz login de novo.
+
+### Revogação (`token_versao`)
+
+O token guarda a `versao` do usuário no momento do login. Quando `usuario.token_versao` é incrementado, todos os tokens emitidos antes deixam de valer, em **todos os dispositivos**.
+
+Hoje isso acontece no **logout**. Quando a recuperação de senha for implementada, a nova senha também vai incrementar a versão, derrubando as sessões antigas.
+
+Isso não tem custo extra: o hook já consulta o usuário no banco a cada requisição, e só passa a comparar mais uma coluna.
 
 ### Armazenamento no front
 
@@ -60,13 +68,13 @@ Plugin `src/plugins/auth.ts`, registrado como hook `onRequest` global.
 
 ```ts
 // pública
-app.post('/auth/login', { config: { publica: true } }, handler)
+app.post("/auth/login", { config: { publica: true } }, handler);
 
 // qualquer usuário autenticado
-app.get('/auth/me', handler)
+app.get("/auth/me", handler);
 
 // só admin
-app.get('/admin/alunos', { config: { papeis: ['ADMIN'] } }, handler)
+app.get("/admin/alunos", { config: { papeis: ["ADMIN"] } }, handler);
 ```
 
 A cada requisição, o hook:
@@ -74,7 +82,7 @@ A cada requisição, o hook:
 1. Ignora rotas com `config.publica`.
 2. Lê o header `Authorization`. Se estiver ausente → `401 TOKEN_AUSENTE`.
 3. Valida a assinatura e a expiração. Se falhar → `401 TOKEN_INVALIDO`.
-4. Busca o usuário no banco pelo `sub`. Se não existir → `401 TOKEN_INVALIDO`. Isso garante que o usuário ainda existe e que o papel usado é o atual do banco, e não o que estava no token.
+4. Busca o usuário no banco pelo `sub`. Se não existir, ou se a `versao` do token for diferente de `token_versao` (token revogado) → `401 TOKEN_INVALIDO`. Isso garante que o usuário ainda existe, que o token não foi revogado e que o papel usado é o atual do banco, e não o que estava no token.
 5. Se a rota define `config.papeis` e o papel do usuário não está na lista → `403 SEM_PERMISSAO`.
 6. Preenche `request.usuario` para a rota usar.
 
@@ -83,43 +91,75 @@ A cada requisição, o hook:
 Todos os erros da API seguem o mesmo formato:
 
 ```json
-{ "erro": { "codigo": "TOKEN_INVALIDO", "mensagem": "Sessão expirada. Faça login novamente." } }
+{
+  "erro": {
+    "codigo": "TOKEN_INVALIDO",
+    "mensagem": "Sessão inválida ou expirada. Faça login novamente."
+  }
+}
 ```
 
 `codigo` é estável e serve para o front decidir o que fazer. `mensagem` pode ser exibida ao usuário.
 
-| Status | `codigo`                | Quando                                             | Front-end                              |
-| ------ | ----------------------- | -------------------------------------------------- | -------------------------------------- |
-| 401    | `CREDENCIAIS_INVALIDAS` | Login ou senha errados                             | Mostra o erro na tela de login         |
-| 401    | `TOKEN_AUSENTE`         | Rota protegida sem header `Authorization`          | Apaga o token e redireciona a `/login` |
-| 401    | `TOKEN_INVALIDO`        | Token adulterado, expirado ou usuário inexistente  | Apaga o token e redireciona a `/login` |
-| 403    | `SEM_PERMISSAO`         | Usuário autenticado sem o papel exigido pela rota  | Tela "sem acesso" (**não** desloga)    |
-| 429    | `MUITAS_TENTATIVAS`     | Rate limit do login excedido                       | Pede para aguardar e tentar de novo    |
+| Status | `codigo`                | Quando                                                               | Front-end                              |
+| ------ | ----------------------- | -------------------------------------------------------------------- | -------------------------------------- |
+| 401    | `CREDENCIAIS_INVALIDAS` | Login ou senha errados                                               | Mostra o erro na tela de login         |
+| 401    | `TOKEN_AUSENTE`         | Rota protegida sem header `Authorization`                            | Apaga o token e redireciona a `/login` |
+| 401    | `TOKEN_INVALIDO`        | Token adulterado, expirado, revogado (logout) ou usuário inexistente | Apaga o token e redireciona a `/login` |
+| 403    | `SEM_PERMISSAO`         | Usuário autenticado sem o papel exigido pela rota                    | Tela "sem acesso" (**não** desloga)    |
+| 429    | `MUITAS_TENTATIVAS`     | Rate limit do login excedido                                         | Pede para aguardar e tentar de novo    |
+| 400    | `VALIDACAO`             | Corpo/parâmetros inválidos (lista em `detalhes`)                     | Mostra o erro no campo indicado        |
+| 4xx    | `REQUISICAO_INVALIDA`   | Requisição malformada (ex.: JSON quebrado)                           | Mensagem genérica de erro              |
+| 404    | `NAO_ENCONTRADO`        | Rota inexistente                                                     | —                                      |
+| 500    | `ERRO_INTERNO`          | Erro inesperado (detalhes só no log do servidor)                     | Mensagem genérica de erro              |
+
+Em `VALIDACAO`, `detalhes` traz `[{ "campo": "login", "mensagem": "..." }]`.
 
 A mensagem de `CREDENCIAIS_INVALIDAS` é sempre genérica ("Login ou senha inválidos"). Ela não revela se o login existe.
 
 ## Rotas
 
-| Método | Rota           | Acesso      | Descrição                                                         |
-| ------ | -------------- | ----------- | ----------------------------------------------------------------- |
-| POST   | `/auth/login`  | Pública     | Recebe `{ login, senha }`, devolve `{ token, usuario }`           |
-| GET    | `/auth/me`     | Autenticado | Dados do usuário logado (o front usa ao recarregar a página)      |
-| POST   | `/auth/logout` | Autenticado | Stateless: só confirma. Quem descarta o token é o front           |
+| Método | Rota           | Acesso      | Descrição                                                                                                       |
+| ------ | -------------- | ----------- | --------------------------------------------------------------------------------------------------------------- |
+| POST   | `/auth/login`  | Pública     | Recebe `{ login, senha }`, devolve `{ token, usuario }`                                                         |
+| GET    | `/auth/me`     | Autenticado | Dados do usuário logado (o front usa ao recarregar a página)                                                    |
+| POST   | `/auth/logout` | Autenticado | Incrementa `token_versao`: derruba as sessões do usuário em todos os dispositivos. O front também apaga o token |
 
-`POST /auth/login` tem rate limit (`@fastify/rate-limit`) por IP.
+`POST /auth/login` tem rate limit (`@fastify/rate-limit`): **10 tentativas por minuto por IP + login**. A chave inclui o login porque os alunos do Inatel acessam pela mesma rede, ou seja, pelo mesmo IP. Um limite só por IP bloquearia a turma inteira por causa das tentativas de um aluno.
+
+Para o tempo de resposta não revelar se um login existe, o login inexistente também passa por uma verificação argon2, contra um hash falso.
 
 ## Login e senha
 
 - O login é normalizado para **maiúsculas** antes de gravar e antes de comparar (`ges589` = `GES589`).
 - As senhas são guardadas com hash **argon2** (`argon2id`), nunca em texto.
-- Por enquanto **não há troca de senha**: não existe endpoint para isso.
+- **Não existe troca de senha pelo usuário.** O aluno usa a senha que recebe por e-mail.
 
 ### Aluno
 
 - Login: `curso + matrícula` (ex.: `GES589`).
-- Senha inicial: a própria matrícula.
+- Senha: **gerada aleatoriamente** (letras, números e símbolos) e **enviada por e-mail** ao aluno. A senha não é a matrícula, então saber a matrícula de um colega não basta para entrar na conta dele.
+- O e-mail vem de uma **coluna da planilha** de upload e é gravado em `usuario.email`, obrigatório para alunos.
+- A senha é gerada e enviada quando o aluno é criado no upload da planilha. Como o aluno é reaproveitado entre edições, só o aluno **novo** recebe senha. A geração e o envio entram junto com o módulo de edições (upload da planilha).
 
-> ⚠️ **Risco conhecido e aceito nesta versão:** quem souber o curso e a matrícula de um colega consegue entrar como ele. Mitigação atual: rate limit no login. Plano: gerar uma senha aleatória (letras, números e símbolos) e enviá-la por e-mail ao aluno. A coluna `usuario.deve_trocar_senha` já existe no modelo, reservada para esse fluxo, mas ainda não é aplicada pelo hook.
+### Envio de e-mail (decidido, ainda não implementado)
+
+- **SMTP com Nodemailer**, que funciona com qualquer servidor SMTP (do Inatel, Gmail, Outlook ou um provedor). As credenciais ficam em variáveis de ambiente.
+- Em desenvolvimento, um **Mailpit** no `docker-compose` captura os e-mails numa caixa local (`http://localhost:8025`), sem enviar nada de verdade.
+
+### Recuperação de senha (decidido, ainda não implementado)
+
+Se o aluno perder o e-mail ou esquecer a senha, existem **duas formas** de receber uma nova:
+
+1. **O aluno pede pela tela de login** ("esqueci minha senha"): informa o login e recebe uma nova senha no e-mail cadastrado. A resposta é sempre a mesma, exista o login ou não, para não revelar quais logins existem. A rota tem rate limit.
+2. **O admin reenvia** pela lista de alunos.
+
+Nos dois casos: gera uma nova senha aleatória, envia por e-mail e incrementa `token_versao`, o que derruba as sessões antigas.
+
+> 🎨 **Pendência de design (Figma):** as duas funções ainda **não existem no design** e precisam ser adicionadas antes da implementação:
+>
+> - **Tela de login:** link "Esqueci minha senha" e a tela/modal para informar o login, com a mensagem de confirmação ("Se o login existir, enviamos uma nova senha para o e-mail cadastrado").
+> - **Admin/ListaAlunos:** ação "Reenviar senha" por aluno, com confirmação.
 
 ### Admin
 
@@ -134,10 +174,10 @@ A mensagem de `CREDENCIAIS_INVALIDAS` é sempre genérica ("Login ou senha invá
 
 ## Variáveis de ambiente
 
-| Variável          | Descrição                                       |
-| ----------------- | ----------------------------------------------- |
-| `JWT_SECRET`      | Segredo de assinatura do token (mín. 32 chars)  |
-| `JWT_EXPIRES_IN`  | Validade do token (ex.: `8h`)                   |
-| `ADMIN_LOGIN`     | Login do admin criado pelo seed                 |
-| `ADMIN_SENHA`     | Senha do admin criado pelo seed                 |
-| `SWAGGER_ENABLED` | Expõe `/docs` (`true` em dev, `false` em prod)  |
+| Variável          | Descrição                                      |
+| ----------------- | ---------------------------------------------- |
+| `JWT_SECRET`      | Segredo de assinatura do token (mín. 32 chars) |
+| `JWT_EXPIRES_IN`  | Validade do token (ex.: `8h`)                  |
+| `ADMIN_LOGIN`     | Login do admin criado pelo seed                |
+| `ADMIN_SENHA`     | Senha do admin criado pelo seed                |
+| `SWAGGER_ENABLED` | Expõe `/docs` (`true` em dev, `false` em prod) |
