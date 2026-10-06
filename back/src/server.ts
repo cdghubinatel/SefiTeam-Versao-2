@@ -10,14 +10,19 @@ async function main() {
   });
 
   const encerrar = async () => {
-    await app.close();
-    process.exit(0);
+    try {
+      await app.close();
+      process.exit(0);
+    } catch (erro) {
+      app.log.error(erro, 'Falha ao encerrar o servidor');
+      process.exit(1);
+    }
   };
-  process.on('SIGINT', encerrar);
-  process.on('SIGTERM', encerrar);
+  process.on('SIGINT', () => void encerrar());
+  process.on('SIGTERM', () => void encerrar());
 
   try {
-    await app.listen({ port: env.PORT, host: '0.0.0.0' });
+    await app.listen({ port: env.PORT, host: env.HOST });
   } catch (erro) {
     app.log.error(erro);
     process.exit(1);
