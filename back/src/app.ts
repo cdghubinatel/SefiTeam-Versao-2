@@ -31,7 +31,8 @@ export async function buildApp(opcoes: FastifyServerOptions = {}) {
     if (corpo.length === 0) {
       return done(null, undefined);
     }
-    parserJsonPadrao(request, corpo.toString(), done);
+    // O parser padrão responde pelo `done`; o tipo também admite uma versão async, daí o `void`.
+    void parserJsonPadrao(request, corpo.toString(), done);
   });
 
   await app.register(helmet);
