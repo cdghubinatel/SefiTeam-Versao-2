@@ -63,34 +63,35 @@ npm run dev
 
 Copie `.env.example` para `.env`. As variáveis são validadas ao iniciar (`src/config/env.ts`): se alguma estiver inválida, a API não sobe.
 
-| Variável          | Descrição                                           |
-| ----------------- | --------------------------------------------------- |
-| `NODE_ENV`        | `development`, `test` ou `production`               |
-| `PORT`            | Porta da API                                        |
-| `DATABASE_URL`    | URL de conexão do PostgreSQL                        |
-| `JWT_SECRET`      | Segredo para assinar os tokens (mín. 32 caracteres) |
-| `JWT_EXPIRES_IN`  | Validade do token (ex.: `8h`)                       |
-| `CORS_ORIGIN`     | Origem do front-end liberada no CORS                |
-| `ADMIN_LOGIN`     | Login do admin criado pelo seed                     |
-| `ADMIN_SENHA`     | Senha do admin criado pelo seed                     |
-| `SWAGGER_ENABLED` | Expõe o Swagger em `/docs` (`false` em produção)    |
+| Variável          | Descrição                                                                                           |
+| ----------------- | --------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`        | `development`, `test` ou `production`                                                               |
+| `HOST`            | Interface em que a API escuta: `127.0.0.1` (padrão, só a máquina) ou `0.0.0.0` (container/produção) |
+| `PORT`            | Porta da API                                                                                        |
+| `DATABASE_URL`    | URL de conexão do PostgreSQL                                                                        |
+| `JWT_SECRET`      | Segredo para assinar os tokens (mín. 32 caracteres; o de exemplo é recusado em produção)            |
+| `JWT_EXPIRES_IN`  | Validade do token (ex.: `8h`)                                                                       |
+| `CORS_ORIGIN`     | Origem do front-end liberada no CORS                                                                |
+| `ADMIN_LOGIN`     | Login do admin criado pelo seed                                                                     |
+| `ADMIN_SENHA`     | Senha do admin criado pelo seed (mín. 16 caracteres)                                                |
+| `SWAGGER_ENABLED` | Expõe o Swagger em `/docs` (`false` em produção)                                                    |
 
 ## Scripts
 
-| Script                | Descrição                                        |
-| --------------------- | ------------------------------------------------ |
-| `npm run dev`         | Sobe a API em modo desenvolvimento (watch)       |
-| `npm run build`       | Compila para JavaScript em `dist/`               |
-| `npm start`           | Roda a versão compilada                          |
-| `npm run typecheck`   | Checa os tipos sem gerar arquivos                |
-| `npm run lint`        | ESLint (`lint:fix` corrige o que for possível)   |
-| `npm run format`      | Formata com Prettier (`format:check` só confere) |
-| `npm test`            | Roda os testes (`test:watch`, `test:coverage`)   |
-| `npm run db:generate` | Gera o Prisma Client em `src/generated/`         |
-| `npm run db:migrate`  | Cria/aplica migrations no banco local (dev)      |
-| `npm run db:deploy`   | Aplica migrations pendentes (CI/produção)        |
-| `npm run db:seed`     | Cria ou atualiza o admin                         |
-| `npm run db:studio`   | Abre o Prisma Studio                             |
+| Script                | Descrição                                                                   |
+| --------------------- | --------------------------------------------------------------------------- |
+| `npm run dev`         | Sobe a API em modo desenvolvimento (watch)                                  |
+| `npm run build`       | Compila para JavaScript em `dist/`                                          |
+| `npm start`           | Roda a versão compilada                                                     |
+| `npm run typecheck`   | Checa os tipos sem gerar arquivos                                           |
+| `npm run lint`        | ESLint com regras que usam os tipos (`lint:fix` corrige o que for possível) |
+| `npm run format`      | Formata com Prettier (`format:check` só confere)                            |
+| `npm test`            | Roda os testes (`test:watch`, `test:coverage`)                              |
+| `npm run db:generate` | Gera o Prisma Client em `src/generated/`                                    |
+| `npm run db:migrate`  | Cria/aplica migrations no banco local (dev)                                 |
+| `npm run db:deploy`   | Aplica migrations pendentes (CI/produção)                                   |
+| `npm run db:seed`     | Cria ou atualiza o admin                                                    |
+| `npm run db:studio`   | Abre o Prisma Studio                                                        |
 
 ## Banco de dados
 
@@ -106,6 +107,7 @@ Copie `.env.example` para `.env`. As variáveis são validadas ao iniciar (`src/
 - **Integração** (ex.: `routes.test.ts`): `buildApp()` + `app.inject()` contra um banco real, sem subir servidor HTTP.
 - Os testes de integração usam o banco **`sefiteam_test`**, separado do de desenvolvimento. Ele é criado e migrado automaticamente pelo `vitest.global-setup.ts`, que se recusa a rodar se o `DATABASE_URL` não terminar em `_test`. Por isso o `npm test` precisa do Docker ligado.
 - Cada arquivo de teste limpa o banco antes de cada caso (`src/test/db.ts`). Os arquivos rodam um por vez (`fileParallelism: false`), porque compartilham o banco.
+- Os testes também são tipados (o ESLint não aceita `any`): o corpo da resposta é lido com `resposta.json<T>()`, usando o tipo inferido do schema Zod da rota, e os erros com `erroDa(resposta)` (`src/test/http.ts`).
 - Variáveis de ambiente de teste ficam no `vitest.config.ts`.
 - `npm run test:watch` roda os testes afetados a cada arquivo salvo; `npm run test:coverage` gera o relatório de cobertura em `coverage/`.
 

@@ -44,3 +44,13 @@ Se a planilha chegar antes, edições pode passar na frente de grupos.
 
 - [ ] Onde hospedar a API e o banco em produção (deploy).
 - [ ] Qual servidor SMTP usar em produção para enviar os e-mails.
+
+### Checklist para o deploy
+
+Itens que dependem de onde a API vai rodar:
+
+- [ ] **`trustProxy`** no Fastify, se a API ficar atrás de um proxy reverso (Nginx, load balancer da hospedagem). Sem isso, `request.ip` é o IP do proxy e o rate limit do login passa a valer por login apenas. Configurar só com o número de proxies confiáveis (nunca `true` cego, que permite falsificar o IP pelo header `X-Forwarded-For`).
+- [ ] **`HOST=0.0.0.0`** quando a API rodar em container (o padrão `127.0.0.1` só aceita conexões da própria máquina).
+- [ ] **`JWT_SECRET` forte** e próprio (a API recusa o de exemplo em produção), **`SWAGGER_ENABLED=false`** e **`CORS_ORIGIN`** com a URL real do front.
+- [ ] **Seed do admin**: o `npm run db:seed` usa o `tsx`, que é dependência de desenvolvimento. Rodar o seed antes de podar as devDependencies, ou numa etapa separada.
+- [ ] **Uma instância só da API**: o rate limit do login fica em memória. Com mais de uma instância, cada uma conta separado (precisaria de Redis).

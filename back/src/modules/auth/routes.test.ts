@@ -1,7 +1,12 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
+import type { z } from 'zod';
 import { buildApp } from '../../app.js';
 import { criarUsuario, limparBanco } from '../../test/db.js';
+import { erroDa } from '../../test/http.js';
+import type { loginRespostaSchema } from './schemas.js';
+
+type LoginResposta = z.infer<typeof loginRespostaSchema>;
 
 describe('rotas /auth', () => {
   let app: FastifyInstance;
@@ -30,7 +35,7 @@ describe('rotas /auth', () => {
       const resposta = await login({ login: 'GES589', senha: 'GES589-senha' });
 
       expect(resposta.statusCode).toBe(200);
-      const corpo = resposta.json();
+      const corpo = resposta.json<LoginResposta>();
       expect(corpo.usuario).toEqual({
         id: aluno.id,
         login: 'GES589',
@@ -66,8 +71,8 @@ describe('rotas /auth', () => {
       const resposta = await login({ login: '' });
 
       expect(resposta.statusCode).toBe(400);
-      expect(resposta.json().erro.codigo).toBe('VALIDACAO');
-      expect(resposta.json().erro.detalhes.map((d: { campo: string }) => d.campo)).toEqual(
+      expect(erroDa(resposta).codigo).toBe('VALIDACAO');
+      expect(erroDa(resposta).detalhes?.map((d) => d.campo)).toEqual(
         expect.arrayContaining(['login', 'senha']),
       );
     });
@@ -81,7 +86,7 @@ describe('rotas /auth', () => {
       const outroLogin = await login({ login: 'OUTRO1', senha: 'errada' });
 
       expect(bloqueado.statusCode).toBe(429);
-      expect(bloqueado.json().erro.codigo).toBe('MUITAS_TENTATIVAS');
+      expect(erroDa(bloqueado).codigo).toBe('MUITAS_TENTATIVAS');
       // Outro aluno no mesmo IP continua podendo tentar.
       expect(outroLogin.statusCode).toBe(401);
     });
@@ -91,7 +96,7 @@ describe('rotas /auth', () => {
     async function tokenDe(loginUsuario: string) {
       await criarUsuario(app.prisma, { login: loginUsuario, senha: 'senha-teste' });
       const resposta = await login({ login: loginUsuario, senha: 'senha-teste' });
-      return resposta.json().token as string;
+      return resposta.json<LoginResposta>().token;
     }
 
     it('GET /auth/me devolve o usuário logado', async () => {
@@ -122,7 +127,7 @@ describe('rotas /auth', () => {
     it('POST /auth/logout invalida os tokens de todos os dispositivos', async () => {
       await criarUsuario(app.prisma, { login: 'GES103', senha: 'senha-teste' });
       const entrar = async () =>
-        (await login({ login: 'GES103', senha: 'senha-teste' })).json().token as string;
+        (await login({ login: 'GES103', senha: 'senha-teste' })).json<LoginResposta>().token;
       const me = (token: string) =>
         app.inject({
           method: 'GET',
@@ -138,8 +143,8 @@ describe('rotas /auth', () => {
         headers: { authorization: `Bearer ${celular}` },
       });
 
-      expect((await me(celular)).json().erro.codigo).toBe('TOKEN_INVALIDO');
-      expect((await me(notebook)).json().erro.codigo).toBe('TOKEN_INVALIDO');
+      expect(erroDa(await me(celular)).codigo).toBe('TOKEN_INVALIDO');
+      expect(erroDa(await me(notebook)).codigo).toBe('TOKEN_INVALIDO');
       // Um novo login volta a funcionar normalmente.
       expect((await me(await entrar())).statusCode).toBe(200);
     });
@@ -166,6 +171,6 @@ describe('rotas /auth', () => {
     });
 
     expect(resposta.statusCode).toBe(400);
-    expect(resposta.json().erro.codigo).toBe('REQUISICAO_INVALIDA');
+    expect(erroDa(resposta).codigo).toBe('REQUISICAO_INVALIDA');
   });
 });

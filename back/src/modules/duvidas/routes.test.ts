@@ -1,8 +1,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { FastifyInstance, InjectOptions } from 'fastify';
+import type { z } from 'zod';
 import { buildApp } from '../../app.js';
 import type { Papel } from '../../generated/prisma/client.js';
 import { criarUsuario, limparBanco } from '../../test/db.js';
+import { erroDa } from '../../test/http.js';
+import type { duvidaSchema } from './schemas.js';
+
+type Duvida = z.infer<typeof duvidaSchema>;
 
 describe('rotas /duvidas', () => {
   let app: FastifyInstance;
@@ -42,7 +47,7 @@ describe('rotas /duvidas', () => {
 
   async function idsNaOrdem() {
     const resposta = await requisicao({ method: 'GET', url: '/duvidas' }, tokenAluno);
-    return resposta.json().map((duvida: { id: number }) => duvida.id);
+    return resposta.json<Duvida[]>().map((duvida) => duvida.id);
   }
 
   describe('GET /duvidas', () => {
@@ -96,7 +101,7 @@ describe('rotas /duvidas', () => {
       const resposta = await criar({ pergunta: 'P?', resposta: 'R' }, tokenAluno);
 
       expect(resposta.statusCode).toBe(403);
-      expect(resposta.json().erro.codigo).toBe('SEM_PERMISSAO');
+      expect(erroDa(resposta).codigo).toBe('SEM_PERMISSAO');
     });
 
     it.each([
@@ -108,8 +113,8 @@ describe('rotas /duvidas', () => {
       const resposta = await criar(payload);
 
       expect(resposta.statusCode).toBe(400);
-      expect(resposta.json().erro.codigo).toBe('VALIDACAO');
-      expect(resposta.json().erro.detalhes).toContainEqual(expect.objectContaining({ campo }));
+      expect(erroDa(resposta).codigo).toBe('VALIDACAO');
+      expect(erroDa(resposta).detalhes).toContainEqual(expect.objectContaining({ campo }));
     });
 
     it('aceita os tamanhos máximos', async () => {
@@ -151,7 +156,7 @@ describe('rotas /duvidas', () => {
       const resposta = await editar(id, { pergunta: 'P?', resposta: 'R' });
 
       expect(resposta.statusCode).toBe(400);
-      expect(resposta.json().erro.codigo).toBe('VALIDACAO');
+      expect(erroDa(resposta).codigo).toBe('VALIDACAO');
     });
 
     it('responde 403 para aluno', async () => {
@@ -183,7 +188,7 @@ describe('rotas /duvidas', () => {
       const resposta = await apagar(999);
 
       expect(resposta.statusCode).toBe(404);
-      expect(resposta.json().erro.codigo).toBe('NAO_ENCONTRADO');
+      expect(erroDa(resposta).codigo).toBe('NAO_ENCONTRADO');
     });
 
     it('responde 403 para aluno', async () => {
@@ -238,7 +243,7 @@ describe('rotas /duvidas', () => {
         tokenAdmin,
       );
 
-      expect(await idsNaOrdem()).toEqual([c, b, a, nova.json().id]);
+      expect(await idsNaOrdem()).toEqual([c, b, a, nova.json<Duvida>().id]);
     });
 
     it.each([
@@ -250,8 +255,17 @@ describe('rotas /duvidas', () => {
       const resposta = await reordenar({ ids: montar([...ids].reverse()) });
 
       expect(resposta.statusCode).toBe(409);
-      expect(resposta.json().erro.codigo).toBe('ORDEM_DESATUALIZADA');
+      expect(erroDa(resposta).codigo).toBe('ORDEM_DESATUALIZADA');
       expect(await idsNaOrdem()).toEqual(ids);
+    });
+
+    it('responde 400 VALIDACAO com mais de 100 ids', async () => {
+      const ids = Array.from({ length: 101 }, (_, indice) => indice + 1);
+
+      const resposta = await reordenar({ ids });
+
+      expect(resposta.statusCode).toBe(400);
+      expect(erroDa(resposta).codigo).toBe('VALIDACAO');
     });
 
     it('responde 400 VALIDACAO com ids repetidos', async () => {
@@ -260,7 +274,7 @@ describe('rotas /duvidas', () => {
       const resposta = await reordenar({ ids: [a, b, b] });
 
       expect(resposta.statusCode).toBe(400);
-      expect(resposta.json().erro.codigo).toBe('VALIDACAO');
+      expect(erroDa(resposta).codigo).toBe('VALIDACAO');
     });
 
     it('responde 403 para aluno', async () => {

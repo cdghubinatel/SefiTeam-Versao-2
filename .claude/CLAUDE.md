@@ -65,6 +65,9 @@ Armadilhas conhecidas:
 - URLs do banco usam **`127.0.0.1`**, não `localhost` (na máquina do usuário, outro processo escuta em `::1:5432`).
 - O usuário costuma deixar `npm run dev` rodando na porta 3333. Para testar a API compilada, usar outra porta (`PORT=3399`).
 - Depois de mudar o `schema.prisma`, rodar `npm run db:generate` e reiniciar o `npm run dev`.
+- `ADMIN_SENHA` precisa ter 16+ caracteres, senão o `db:seed` falha (o valor do `.env.example` é recusado de propósito).
+- O ESLint usa regras com tipos (`recommendedTypeChecked`), inclusive nos testes: promise solta precisa de `await`, `.catch` ou `void` explícito, e `any` não passa. Nos testes, tipar o corpo com `resposta.json<T>()` (com `z.infer` do schema da rota) e ler erros com `erroDa(resposta)` (`src/test/http.ts`).
+- A API escuta em `HOST` (padrão `127.0.0.1`) e o Postgres do compose só em `127.0.0.1`: não expor dev na rede local/VPN.
 
 ## Front-end (`front/`)
 

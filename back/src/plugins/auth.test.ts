@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../app.js';
 import type { Papel } from '../generated/prisma/client.js';
 import { criarUsuario, limparBanco } from '../test/db.js';
+import { erroDa } from '../test/http.js';
 
 describe('hook de autenticação e autorização', () => {
   let app: FastifyInstance;
@@ -45,7 +46,7 @@ describe('hook de autenticação e autorização', () => {
     const resposta = await get('/teste/autenticado');
 
     expect(resposta.statusCode).toBe(401);
-    expect(resposta.json().erro.codigo).toBe('TOKEN_AUSENTE');
+    expect(erroDa(resposta).codigo).toBe('TOKEN_AUSENTE');
   });
 
   it('responde 401 TOKEN_AUSENTE quando o header não é Bearer', async () => {
@@ -55,7 +56,7 @@ describe('hook de autenticação e autorização', () => {
       headers: { authorization: 'Basic abc' },
     });
 
-    expect(resposta.json().erro.codigo).toBe('TOKEN_AUSENTE');
+    expect(erroDa(resposta).codigo).toBe('TOKEN_AUSENTE');
   });
 
   it('responde 401 TOKEN_INVALIDO para token adulterado', async () => {
@@ -64,7 +65,7 @@ describe('hook de autenticação e autorização', () => {
     const resposta = await get('/teste/autenticado', `${token}x`);
 
     expect(resposta.statusCode).toBe(401);
-    expect(resposta.json().erro.codigo).toBe('TOKEN_INVALIDO');
+    expect(erroDa(resposta).codigo).toBe('TOKEN_INVALIDO');
   });
 
   it('responde 401 TOKEN_INVALIDO para token expirado', async () => {
@@ -78,7 +79,7 @@ describe('hook de autenticação e autorização', () => {
     const resposta = await get('/teste/autenticado', token);
 
     expect(resposta.statusCode).toBe(401);
-    expect(resposta.json().erro.codigo).toBe('TOKEN_INVALIDO');
+    expect(erroDa(resposta).codigo).toBe('TOKEN_INVALIDO');
   });
 
   it('responde 401 TOKEN_INVALIDO quando o usuário não existe mais', async () => {
@@ -88,7 +89,7 @@ describe('hook de autenticação e autorização', () => {
     const resposta = await get('/teste/autenticado', token);
 
     expect(resposta.statusCode).toBe(401);
-    expect(resposta.json().erro.codigo).toBe('TOKEN_INVALIDO');
+    expect(erroDa(resposta).codigo).toBe('TOKEN_INVALIDO');
   });
 
   it('responde 401 TOKEN_INVALIDO quando o token foi revogado (token_versao mudou)', async () => {
@@ -101,7 +102,7 @@ describe('hook de autenticação e autorização', () => {
     const resposta = await get('/teste/autenticado', token);
 
     expect(resposta.statusCode).toBe(401);
-    expect(resposta.json().erro.codigo).toBe('TOKEN_INVALIDO');
+    expect(erroDa(resposta).codigo).toBe('TOKEN_INVALIDO');
   });
 
   it('preenche request.usuario com token válido', async () => {
@@ -119,7 +120,7 @@ describe('hook de autenticação e autorização', () => {
     const resposta = await get('/teste/admin', token);
 
     expect(resposta.statusCode).toBe(403);
-    expect(resposta.json().erro.codigo).toBe('SEM_PERMISSAO');
+    expect(erroDa(resposta).codigo).toBe('SEM_PERMISSAO');
   });
 
   it('libera admin em rota de admin', async () => {
@@ -149,6 +150,6 @@ describe('hook de autenticação e autorização', () => {
     const resposta = await get('/nao-existe');
 
     expect(resposta.statusCode).toBe(404);
-    expect(resposta.json().erro.codigo).toBe('NAO_ENCONTRADO');
+    expect(erroDa(resposta).codigo).toBe('NAO_ENCONTRADO');
   });
 });

@@ -14,7 +14,7 @@ export const duvidaParamsSchema = z.object({
 export const reordenarBodySchema = z.object({
   ids: z
     .array(z.number().int().positive())
-    .max(500)
+    .max(100)
     .refine((ids) => new Set(ids).size === ids.length, 'A lista não pode ter ids repetidos.'),
 });
 
