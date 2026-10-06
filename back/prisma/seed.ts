@@ -5,7 +5,8 @@ import { criarPrismaClient } from '../src/lib/prisma.js';
 const seedEnvSchema = z.object({
   DATABASE_URL: z.url(),
   ADMIN_LOGIN: z.string().trim().min(1),
-  ADMIN_SENHA: z.string().min(8, 'ADMIN_SENHA deve ter pelo menos 8 caracteres'),
+  // O admin é o alvo mais valioso de força bruta (a senha dos alunos é aleatória).
+  ADMIN_SENHA: z.string().min(16, 'ADMIN_SENHA deve ter pelo menos 16 caracteres'),
 });
 
 async function main() {
