@@ -37,6 +37,20 @@ export class SemPermissao extends AppError {
   }
 }
 
+/** Recurso inexistente (ex.: `:id` que não está no banco). Mesmo código da rota inexistente. */
+export class NaoEncontrado extends AppError {
+  constructor(mensagem = 'Recurso não encontrado.') {
+    super(404, 'NAO_ENCONTRADO', mensagem);
+  }
+}
+
+/** A lista enviada para reordenar não bate com as dúvidas do banco (alguém criou ou apagou uma). */
+export class OrdemDesatualizada extends AppError {
+  constructor() {
+    super(409, 'ORDEM_DESATUALIZADA', 'A lista de dúvidas mudou. Recarregue e tente novamente.');
+  }
+}
+
 export class MuitasTentativas extends AppError {
   constructor() {
     super(429, 'MUITAS_TENTATIVAS', 'Muitas tentativas. Aguarde um pouco e tente novamente.');
