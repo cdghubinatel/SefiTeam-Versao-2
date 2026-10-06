@@ -1,0 +1,33 @@
+# Atualizações automáticas de dependências (abre PRs semanais).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /back
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: 'chore(deps)'
+    # Minor e patch num PR só, para não virar spam.
+    groups:
+      back-minor-patch:
+        update-types: [minor, patch]
+    # Majors fixadas de propósito (ver .claude/CLAUDE.md, "Armadilhas conhecidas").
+    ignore:
+      - dependency-name: prisma
+        update-types: [version-update:semver-major]
+      - dependency-name: '@prisma/*'
+        update-types: [version-update:semver-major]
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+      - dependency-name: '@types/node' # acompanha o Node 24 (LTS)
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: 'ci'
+    groups:
+      actions:
+        patterns: ['*']
