@@ -36,7 +36,8 @@ O professor (admin) cria uma **edição** da feira e faz upload de uma planilha 
 ├── front/               # SPA (Vite + React)
 ├── docs/
 │   ├── modelo-banco.md  # Modelo de dados e regras
-│   └── autenticacao.md  # Login, token e permissões
+│   ├── autenticacao.md  # Login, token e permissões
+│   └── roadmap.md       # O que está pronto e próximos passos
 └── docker-compose.yml   # PostgreSQL para desenvolvimento
 ```
 
@@ -64,6 +65,7 @@ cd front
 
 - [Modelo do banco de dados](docs/modelo-banco.md)
 - [Autenticação e autorização](docs/autenticacao.md)
+- [Roadmap](docs/roadmap.md)
 - [Back-end](back/README.md)
 - [Front-end](front/README.md)
 - [Design no Figma](https://www.figma.com/design/I1xx6CkhTr5MQHD0WsgLb7/Sefiteam)
