@@ -20,6 +20,9 @@ back/src/generated/
 *.log
 npm-debug.log*
 
+# Claude Code: configurações pessoais (o .claude/CLAUDE.md é compartilhado)
+.claude/settings.local.json
+
 # Editor / SO
 .vscode/*
 !.vscode/extensions.json
