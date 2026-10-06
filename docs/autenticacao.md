@@ -165,6 +165,7 @@ Nos dois casos: gera uma nova senha aleatória, envia por e-mail e incrementa `t
 ### Admin
 
 - Existe **um único** admin, criado pelo seed do Prisma a partir de `ADMIN_LOGIN` e `ADMIN_SENHA` (`.env`).
+- `ADMIN_SENHA` precisa ter **pelo menos 16 caracteres** (o seed recusa senhas menores). O admin é o alvo mais valioso de força bruta: a senha dos alunos é aleatória, a do admin é escolhida por uma pessoa, e o rate limit do login é por IP + login, então não impede tentativas vindas de muitos IPs.
 - O seed é idempotente: rodar de novo não duplica o admin.
 - **O admin não troca a senha pelo sistema** (decisão desta primeira versão). A única forma é mudar `ADMIN_SENHA` no `.env` e rodar `npm run db:seed` de novo, o que atualiza o hash.
 - Limitação conhecida: o seed **não** incrementa `token_versao`, então tokens do admin emitidos antes da troca continuam válidos até expirar (`JWT_EXPIRES_IN`). Se a troca de senha do admin entrar no sistema, ela deve incrementar `token_versao`, como acontece na recuperação de senha do aluno.
@@ -182,5 +183,5 @@ Nos dois casos: gera uma nova senha aleatória, envia por e-mail e incrementa `t
 | `JWT_SECRET`      | Segredo de assinatura do token (mín. 32 chars) |
 | `JWT_EXPIRES_IN`  | Validade do token (ex.: `8h`)                  |
 | `ADMIN_LOGIN`     | Login do admin criado pelo seed                |
-| `ADMIN_SENHA`     | Senha do admin criado pelo seed                |
+| `ADMIN_SENHA`     | Senha do admin criado pelo seed (mín. 16)      |
 | `SWAGGER_ENABLED` | Expõe `/docs` (`true` em dev, `false` em prod) |

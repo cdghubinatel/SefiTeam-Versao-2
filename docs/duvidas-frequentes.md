@@ -29,7 +29,7 @@ Cada dúvida sai como `{ id, pergunta, resposta, ordem }`. A lista não é pagin
 
 O front manda **todos os ids na nova ordem**; o back grava `ordem = posição + 1` numa transação.
 
-- Ids repetidos ou que não sejam inteiros positivos: `400 VALIDACAO`. Máximo de 500 ids.
+- Ids repetidos ou que não sejam inteiros positivos: `400 VALIDACAO`. Máximo de 100 ids (cada id vira um `UPDATE` dentro da transação, que o Prisma cancela após 5s).
 - Se a lista não tiver **exatamente** as dúvidas cadastradas (alguém criou ou apagou uma em outra aba enquanto o admin reordenava): `409 ORDEM_DESATUALIZADA`, e nada é alterado. O front avisa e recarrega a lista.
 - Com nenhuma dúvida cadastrada, `{ "ids": [] }` é aceito.
 
