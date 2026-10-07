@@ -60,6 +60,7 @@ Armadilhas conhecidas:
 
 - **TypeScript fixado em `~6.0`**: o `typescript-eslint` ainda não suporta a 7.
 - **Prisma fixado em `7.10.0`**: a tag `latest` do npm aponta para uma RC da 8. Não aplicar `npm audit fix --force` (rebaixa o Prisma para a 6); as vulnerabilidades apontadas são só do CLI do Prisma.
+- **`vite` declarado nas devDependencies de propósito** (peer do Vitest; ver `back/README.md`). Sem ele, o `npm install` apaga do lock os binários nativos do rolldown/lightningcss e o Vitest quebra. Depois de instalar um pacote, conferir no `git diff package-lock.json` se só entrou o que devia.
 - O `CHECK(minimo_integrantes <= maximo_integrantes)` está escrito à mão na migration inicial. Ao gerar migrations, conferir que o Prisma não tentou removê-lo.
 - Apagar grupo: a FK `(grupo_id, fisica_id)` é `ON DELETE RESTRICT`; desvincular os integrantes antes, na mesma transação.
 - URLs do banco usam **`127.0.0.1`**, não `localhost` (na máquina do usuário, outro processo escuta em `::1:5432`).

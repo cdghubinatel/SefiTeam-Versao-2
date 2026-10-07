@@ -13,6 +13,8 @@ API REST do SefiTeam.
 
 > TypeScript fixado em `~6.0`: o `typescript-eslint` ainda não suporta o TypeScript 7.
 
+> **`vite` nas devDependencies:** o back não usa o Vite diretamente, mas o Vitest exige o Vite como _peer dependency_ (aceita as versões 6, 7 ou 8). Não remova. Sem ele declarado, o npm instala o Vite implicitamente e, a cada `npm install`, apaga do `package-lock.json` os binários nativos por plataforma (`@rolldown/binding-*`, `lightningcss-*`), e o Vitest para de rodar. Ao atualizar o Vite para uma versão nova principal, confira se o Vitest já a aceita.
+
 **Imports em ESM:** imports relativos levam a extensão `.js`, mesmo apontando para arquivos `.ts`, por exemplo `import { env } from './config/env.js'`. É o padrão do Node em ESM (`moduleResolution: nodenext`). O `verbatimModuleSyntax` está ligado, então imports que são só de tipo usam `import type`.
 
 ## Estrutura
