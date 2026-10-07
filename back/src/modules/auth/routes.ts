@@ -2,7 +2,7 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { erroSchema } from '../../shared/errors/schemas.js';
 import { loginBodySchema, loginRespostaSchema, usuarioSchema } from './schemas.js';
-import { autenticar, encerrarSessoes, normalizarLogin } from './service.js';
+import { autenticar, encerrarSessoes, normalizarEmail } from './service.js';
 
 export const authRoutes: FastifyPluginAsyncZod = async (app) => {
   app.post(
@@ -10,14 +10,14 @@ export const authRoutes: FastifyPluginAsyncZod = async (app) => {
     {
       config: {
         publica: true,
-        // Por IP + login: alunos na mesma rede (mesmo IP) não bloqueiam uns aos outros.
+        // Por IP + e-mail: alunos na mesma rede (mesmo IP) não bloqueiam uns aos outros.
         rateLimit: {
           max: 10,
           timeWindow: '1 minute',
           hook: 'preHandler',
           keyGenerator: (request) => {
-            const { login } = (request.body ?? {}) as { login?: unknown };
-            return `${request.ip}:${typeof login === 'string' ? normalizarLogin(login) : ''}`;
+            const { email } = (request.body ?? {}) as { email?: unknown };
+            return `${request.ip}:${typeof email === 'string' ? normalizarEmail(email) : ''}`;
           },
         },
       },
