@@ -51,6 +51,13 @@ export class OrdemDesatualizada extends AppError {
   }
 }
 
+/** O aluno já tem grupo nesta Física (cada aluno fica em um único grupo por Física). */
+export class JaEmGrupo extends AppError {
+  constructor(mensagem = 'Você já está em um grupo nesta Física.') {
+    super(409, 'JA_EM_GRUPO', mensagem);
+  }
+}
+
 export class MuitasTentativas extends AppError {
   constructor() {
     super(429, 'MUITAS_TENTATIVAS', 'Muitas tentativas. Aguarde um pouco e tente novamente.');
