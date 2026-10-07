@@ -25,7 +25,11 @@ describe('hook de autenticação e autorização', () => {
   });
 
   async function usuarioComToken(papel: Papel) {
-    const usuario = await criarUsuario(app.prisma, { login: `U${papel}`, senha: 'x', papel });
+    const usuario = await criarUsuario(app.prisma, {
+      email: `${papel.toLowerCase()}@teste.local`,
+      senha: 'x',
+      papel,
+    });
     const token = app.jwt.sign({ sub: String(usuario.id), papel, versao: usuario.tokenVersao });
     return { usuario, token };
   }
@@ -69,7 +73,7 @@ describe('hook de autenticação e autorização', () => {
   });
 
   it('responde 401 TOKEN_INVALIDO para token expirado', async () => {
-    const usuario = await criarUsuario(app.prisma, { login: 'EXPIRADO', senha: 'x' });
+    const usuario = await criarUsuario(app.prisma, { email: 'expirado@teste.local', senha: 'x' });
     const duasHorasAtras = Date.now() - 2 * 60 * 60 * 1000;
     const token = app.jwt.sign(
       { sub: String(usuario.id), papel: 'ALUNO', versao: usuario.tokenVersao },
@@ -131,7 +135,7 @@ describe('hook de autenticação e autorização', () => {
 
   it('usa o papel atual do banco, não o do token', async () => {
     const usuario = await criarUsuario(app.prisma, {
-      login: 'REBAIXADO',
+      email: 'rebaixado@teste.local',
       senha: 'x',
       papel: 'ALUNO',
     });

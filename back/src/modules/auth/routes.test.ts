@@ -5,6 +5,7 @@ import { buildApp } from '../../app.js';
 import { criarUsuario, limparBanco } from '../../test/db.js';
 import { erroDa } from '../../test/http.js';
 import type { loginRespostaSchema } from './schemas.js';
+import { senhaDoAluno } from './service.js';
 
 type LoginResposta = z.infer<typeof loginRespostaSchema>;
 
@@ -28,79 +29,118 @@ describe('rotas /auth', () => {
     return app.inject({ method: 'POST', url: '/auth/login', payload: body });
   }
 
+  function criarAluno(email: string) {
+    return criarUsuario(app.prisma, {
+      email,
+      senha: senhaDoAluno({ curso: 'GES', matricula: '589' }),
+      curso: 'GES',
+      matricula: '589',
+    });
+  }
+
   describe('POST /auth/login', () => {
     it('devolve token e usuário com credenciais válidas', async () => {
-      const aluno = await criarUsuario(app.prisma, { login: 'GES589', senha: 'GES589-senha' });
+      const aluno = await criarAluno('maria@inatel.br');
 
-      const resposta = await login({ login: 'GES589', senha: 'GES589-senha' });
+      const resposta = await login({ email: 'maria@inatel.br', senha: 'GES589' });
 
       expect(resposta.statusCode).toBe(200);
       const corpo = resposta.json<LoginResposta>();
       expect(corpo.usuario).toEqual({
         id: aluno.id,
-        login: 'GES589',
+        email: 'maria@inatel.br',
         nome: aluno.nome,
         papel: 'ALUNO',
       });
       expect(app.jwt.verify(corpo.token)).toMatchObject({ sub: String(aluno.id), papel: 'ALUNO' });
     });
 
-    it('aceita o login em minúsculas', async () => {
-      await criarUsuario(app.prisma, { login: 'GES589', senha: 'GES589-senha' });
+    it('aceita o e-mail com maiúsculas e espaços nas pontas', async () => {
+      await criarAluno('maria@inatel.br');
 
-      const resposta = await login({ login: 'ges589', senha: 'GES589-senha' });
+      const resposta = await login({ email: '  Maria@Inatel.BR ', senha: 'GES589' });
 
       expect(resposta.statusCode).toBe(200);
     });
 
-    it('responde 401 genérico para senha errada e para login inexistente', async () => {
-      await criarUsuario(app.prisma, { login: 'GES589', senha: 'GES589-senha' });
+    it('aceita a senha do aluno em minúsculas', async () => {
+      await criarAluno('maria@inatel.br');
 
-      const senhaErrada = await login({ login: 'GES589', senha: 'errada' });
-      const loginInexistente = await login({ login: 'NAOEXISTE', senha: 'errada' });
+      const resposta = await login({ email: 'maria@inatel.br', senha: 'ges589' });
 
-      for (const resposta of [senhaErrada, loginInexistente]) {
+      expect(resposta.statusCode).toBe(200);
+    });
+
+    it('diferencia maiúsculas na senha do admin', async () => {
+      await criarUsuario(app.prisma, {
+        email: 'admin@inatel.br',
+        senha: 'Senha-Do-Admin-123',
+        papel: 'ADMIN',
+      });
+
+      const exata = await login({ email: 'admin@inatel.br', senha: 'Senha-Do-Admin-123' });
+      const minusculas = await login({ email: 'admin@inatel.br', senha: 'senha-do-admin-123' });
+
+      expect(exata.statusCode).toBe(200);
+      expect(minusculas.statusCode).toBe(401);
+    });
+
+    it('responde 401 genérico para senha errada e para e-mail inexistente', async () => {
+      await criarAluno('maria@inatel.br');
+
+      const senhaErrada = await login({ email: 'maria@inatel.br', senha: 'GES590' });
+      const emailInexistente = await login({ email: 'ninguem@inatel.br', senha: 'GES589' });
+
+      for (const resposta of [senhaErrada, emailInexistente]) {
         expect(resposta.statusCode).toBe(401);
         expect(resposta.json()).toEqual({
-          erro: { codigo: 'CREDENCIAIS_INVALIDAS', mensagem: 'Login ou senha inválidos.' },
+          erro: { codigo: 'CREDENCIAIS_INVALIDAS', mensagem: 'E-mail ou senha inválidos.' },
         });
       }
     });
 
     it('responde 400 com os campos inválidos', async () => {
-      const resposta = await login({ login: '' });
+      const resposta = await login({ email: '' });
 
       expect(resposta.statusCode).toBe(400);
       expect(erroDa(resposta).codigo).toBe('VALIDACAO');
       expect(erroDa(resposta).detalhes?.map((d) => d.campo)).toEqual(
-        expect.arrayContaining(['login', 'senha']),
+        expect.arrayContaining(['email', 'senha']),
       );
     });
 
-    it('limita tentativas por login e responde 429', async () => {
+    it('responde 400 para e-mail em formato inválido', async () => {
+      const resposta = await login({ email: 'GES589', senha: 'GES589' });
+
+      expect(resposta.statusCode).toBe(400);
+      expect(erroDa(resposta).detalhes?.map((d) => d.campo)).toEqual(['email']);
+    });
+
+    it('limita tentativas por e-mail (normalizado) e responde 429', async () => {
       for (let i = 0; i < 10; i++) {
-        await login({ login: 'ALVO1', senha: 'errada' });
+        // Alterna maiúsculas: o limite conta o mesmo e-mail normalizado.
+        await login({ email: i % 2 ? 'Alvo@inatel.br' : 'alvo@inatel.br', senha: 'errada' });
       }
 
-      const bloqueado = await login({ login: 'ALVO1', senha: 'errada' });
-      const outroLogin = await login({ login: 'OUTRO1', senha: 'errada' });
+      const bloqueado = await login({ email: 'alvo@inatel.br', senha: 'errada' });
+      const outroEmail = await login({ email: 'outro@inatel.br', senha: 'errada' });
 
       expect(bloqueado.statusCode).toBe(429);
       expect(erroDa(bloqueado).codigo).toBe('MUITAS_TENTATIVAS');
       // Outro aluno no mesmo IP continua podendo tentar.
-      expect(outroLogin.statusCode).toBe(401);
+      expect(outroEmail.statusCode).toBe(401);
     });
   });
 
   describe('com token', () => {
-    async function tokenDe(loginUsuario: string) {
-      await criarUsuario(app.prisma, { login: loginUsuario, senha: 'senha-teste' });
-      const resposta = await login({ login: loginUsuario, senha: 'senha-teste' });
+    async function tokenDe(email: string) {
+      await criarAluno(email);
+      const resposta = await login({ email, senha: 'GES589' });
       return resposta.json<LoginResposta>().token;
     }
 
     it('GET /auth/me devolve o usuário logado', async () => {
-      const token = await tokenDe('GES100');
+      const token = await tokenDe('maria@inatel.br');
 
       const resposta = await app.inject({
         method: 'GET',
@@ -109,11 +149,11 @@ describe('rotas /auth', () => {
       });
 
       expect(resposta.statusCode).toBe(200);
-      expect(resposta.json()).toMatchObject({ login: 'GES100', papel: 'ALUNO' });
+      expect(resposta.json()).toMatchObject({ email: 'maria@inatel.br', papel: 'ALUNO' });
     });
 
     it('POST /auth/logout responde 204', async () => {
-      const token = await tokenDe('GES101');
+      const token = await tokenDe('maria@inatel.br');
 
       const resposta = await app.inject({
         method: 'POST',
@@ -125,9 +165,9 @@ describe('rotas /auth', () => {
     });
 
     it('POST /auth/logout invalida os tokens de todos os dispositivos', async () => {
-      await criarUsuario(app.prisma, { login: 'GES103', senha: 'senha-teste' });
+      await criarAluno('maria@inatel.br');
       const entrar = async () =>
-        (await login({ login: 'GES103', senha: 'senha-teste' })).json<LoginResposta>().token;
+        (await login({ email: 'maria@inatel.br', senha: 'GES589' })).json<LoginResposta>().token;
       const me = (token: string) =>
         app.inject({
           method: 'GET',
@@ -150,7 +190,7 @@ describe('rotas /auth', () => {
     });
 
     it('POST /auth/logout aceita Content-Type JSON com corpo vazio (como o Swagger envia)', async () => {
-      const token = await tokenDe('GES102');
+      const token = await tokenDe('maria@inatel.br');
 
       const resposta = await app.inject({
         method: 'POST',
@@ -167,7 +207,7 @@ describe('rotas /auth', () => {
       method: 'POST',
       url: '/auth/login',
       headers: { 'content-type': 'application/json' },
-      payload: '{"login": ',
+      payload: '{"email": ',
     });
 
     expect(resposta.statusCode).toBe(400);

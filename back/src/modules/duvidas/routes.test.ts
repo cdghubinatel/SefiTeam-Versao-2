@@ -30,7 +30,11 @@ describe('rotas /duvidas', () => {
   });
 
   async function tokenDe(papel: Papel) {
-    const usuario = await criarUsuario(app.prisma, { login: papel, senha: 'x', papel });
+    const usuario = await criarUsuario(app.prisma, {
+      email: `${papel.toLowerCase()}@teste.local`,
+      senha: 'x',
+      papel,
+    });
     return app.jwt.sign({ sub: String(usuario.id), papel, versao: usuario.tokenVersao });
   }
 

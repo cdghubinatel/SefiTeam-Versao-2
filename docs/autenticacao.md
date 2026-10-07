@@ -11,8 +11,8 @@ sequenceDiagram
     participant R as Rota
     participant DB as PostgreSQL
 
-    F->>R: POST /auth/login { login, senha }
-    R->>DB: busca usuário pelo login
+    F->>R: POST /auth/login { email, senha }
+    R->>DB: busca usuário pelo e-mail
     R-->>F: 200 { token, usuario } ou 401 CREDENCIAIS_INVALIDAS
     Note over F: guarda o token no localStorage
 
@@ -46,7 +46,7 @@ sequenceDiagram
 
 O token guarda a `versao` do usuário no momento do login. Quando `usuario.token_versao` é incrementado, todos os tokens emitidos antes deixam de valer, em **todos os dispositivos**.
 
-Hoje isso acontece no **logout**. Quando a recuperação de senha for implementada, a nova senha também vai incrementar a versão, derrubando as sessões antigas.
+Hoje isso acontece no **logout**. Se a troca ou a recuperação de senha entrar no futuro, a nova senha também deve incrementar a versão, derrubando as sessões antigas.
 
 Isso não tem custo extra: o hook já consulta o usuário no banco a cada requisição, e só passa a comparar mais uma coluna.
 
@@ -103,7 +103,7 @@ Todos os erros da API seguem o mesmo formato:
 
 | Status | `codigo`                | Quando                                                               | Front-end                              |
 | ------ | ----------------------- | -------------------------------------------------------------------- | -------------------------------------- |
-| 401    | `CREDENCIAIS_INVALIDAS` | Login ou senha errados                                               | Mostra o erro na tela de login         |
+| 401    | `CREDENCIAIS_INVALIDAS` | E-mail ou senha errados                                              | Mostra o erro na tela de login         |
 | 401    | `TOKEN_AUSENTE`         | Rota protegida sem header `Authorization`                            | Apaga o token e redireciona a `/login` |
 | 401    | `TOKEN_INVALIDO`        | Token adulterado, expirado, revogado (logout) ou usuário inexistente | Apaga o token e redireciona a `/login` |
 | 403    | `SEM_PERMISSAO`         | Usuário autenticado sem o papel exigido pela rota                    | Tela "sem acesso" (**não** desloga)    |
@@ -114,61 +114,52 @@ Todos os erros da API seguem o mesmo formato:
 | 409    | `ORDEM_DESATUALIZADA`   | Reordenar dúvidas com uma lista que não bate com a do banco          | Avisa e recarrega a lista              |
 | 500    | `ERRO_INTERNO`          | Erro inesperado (detalhes só no log do servidor)                     | Mensagem genérica de erro              |
 
-Em `VALIDACAO`, `detalhes` traz `[{ "campo": "login", "mensagem": "..." }]`.
+Em `VALIDACAO`, `detalhes` traz `[{ "campo": "email", "mensagem": "..." }]`.
 
-A mensagem de `CREDENCIAIS_INVALIDAS` é sempre genérica ("Login ou senha inválidos"). Ela não revela se o login existe.
+A mensagem de `CREDENCIAIS_INVALIDAS` é sempre genérica ("E-mail ou senha inválidos."). Ela não revela se o e-mail está cadastrado.
 
 ## Rotas
 
 | Método | Rota           | Acesso      | Descrição                                                                                                       |
 | ------ | -------------- | ----------- | --------------------------------------------------------------------------------------------------------------- |
-| POST   | `/auth/login`  | Pública     | Recebe `{ login, senha }`, devolve `{ token, usuario }`                                                         |
+| POST   | `/auth/login`  | Pública     | Recebe `{ email, senha }`, devolve `{ token, usuario }`                                                         |
 | GET    | `/auth/me`     | Autenticado | Dados do usuário logado (o front usa ao recarregar a página)                                                    |
 | POST   | `/auth/logout` | Autenticado | Incrementa `token_versao`: derruba as sessões do usuário em todos os dispositivos. O front também apaga o token |
 
-`POST /auth/login` tem rate limit (`@fastify/rate-limit`): **10 tentativas por minuto por IP + login**. A chave inclui o login porque os alunos do Inatel acessam pela mesma rede, ou seja, pelo mesmo IP. Um limite só por IP bloquearia a turma inteira por causa das tentativas de um aluno.
+`usuario` (também em `GET /auth/me`) é `{ id, email, nome, papel }`.
 
-Para o tempo de resposta não revelar se um login existe, o login inexistente também passa por uma verificação argon2, contra um hash falso.
+`POST /auth/login` tem rate limit (`@fastify/rate-limit`): **10 tentativas por minuto por IP + e-mail** (normalizado). A chave inclui o e-mail porque os alunos do Inatel acessam pela mesma rede, ou seja, pelo mesmo IP. Um limite só por IP bloquearia a turma inteira por causa das tentativas de um aluno.
+
+Para o tempo de resposta não revelar se um e-mail está cadastrado, o e-mail inexistente também passa por uma verificação argon2, contra um hash falso.
 
 ## Login e senha
 
-- O login é normalizado para **maiúsculas** antes de gravar e antes de comparar (`ges589` = `GES589`).
+- O login de todos os usuários é o **e-mail** (`usuario.email`, único). Ele é normalizado (sem espaços nas pontas, em **minúsculas**) antes de gravar e antes de comparar: `Maria@Inatel.br` = `maria@inatel.br`.
+- O corpo do login é validado como e-mail (até 254 caracteres); fora do formato, `400 VALIDACAO`.
 - As senhas são guardadas com hash **argon2** (`argon2id`), nunca em texto.
-- **Não existe troca de senha pelo usuário.** O aluno usa a senha que recebe por e-mail.
+- **Não existe troca nem recuperação de senha** nesta versão, e o sistema não envia e-mails.
 
 ### Aluno
 
-- Login: `curso + matrícula` (ex.: `GES589`).
-- Senha: **gerada aleatoriamente** (letras, números e símbolos) e **enviada por e-mail** ao aluno. A senha não é a matrícula, então saber a matrícula de um colega não basta para entrar na conta dele.
-- O e-mail vem de uma **coluna da planilha** de upload e é gravado em `usuario.email`, obrigatório para alunos.
-- A senha é gerada e enviada quando o aluno é criado no upload da planilha. Como o aluno é reaproveitado entre edições, só o aluno **novo** recebe senha. A geração e o envio entram junto com o módulo de edições (upload da planilha).
+- Login: o e-mail, que vem de uma **coluna da planilha** de upload.
+- Senha: **curso + matrícula** (ex.: `GES589`), gerada por `senhaDoAluno({ curso, matricula })` (`back/src/modules/auth/service.ts`) quando o aluno é cadastrado no upload.
+- A senha do aluno **não diferencia maiúsculas**: `ges589` = `GES589`. O hash é gravado em maiúsculas e, no login de um aluno, o que foi digitado é convertido antes de comparar. Isso evita erros por caps lock no celular.
+- Como o aluno é reaproveitado entre edições, a senha continua a mesma de um semestre para o outro.
 
-### Envio de e-mail (decidido, ainda não implementado)
+#### Risco aceito
 
-- **SMTP com Nodemailer**, que funciona com qualquer servidor SMTP (do Inatel, Gmail, Outlook ou um provedor). As credenciais ficam em variáveis de ambiente.
-- Em desenvolvimento, um **Mailpit** no `docker-compose` captura os e-mails numa caixa local (`http://localhost:8025`), sem enviar nada de verdade.
+A senha do aluno **não é secreta**: curso e matrícula são conhecidos pelos colegas, e o e-mail institucional costuma ser fácil de deduzir. Quem souber esses dados de um colega consegue entrar como ele, criar ou sair de grupos em seu nome, e o sistema registra como se tivesse sido o colega. O rate limit do login também não protege contra isso, porque não há o que adivinhar.
 
-### Recuperação de senha (decidido, ainda não implementado)
-
-Se o aluno perder o e-mail ou esquecer a senha, existem **duas formas** de receber uma nova:
-
-1. **O aluno pede pela tela de login** ("esqueci minha senha"): informa o login e recebe uma nova senha no e-mail cadastrado. A resposta é sempre a mesma, exista o login ou não, para não revelar quais logins existem. A rota tem rate limit.
-2. **O admin reenvia** pela lista de alunos.
-
-Nos dois casos: gera uma nova senha aleatória, envia por e-mail e incrementa `token_versao`, o que derruba as sessões antigas.
-
-> 🎨 **Pendência de design (Figma):** as duas funções ainda **não existem no design** e precisam ser adicionadas antes da implementação:
->
-> - **Tela de login:** link "Esqueci minha senha" e a tela/modal para informar o login, com a mensagem de confirmação ("Se o login existir, enviamos uma nova senha para o e-mail cadastrado").
-> - **Admin/ListaAlunos:** ação "Reenviar senha" por aluno, com confirmação.
+Foi uma decisão consciente para esta primeira versão (simplicidade, sem depender de um servidor de e-mail). Para fechar o risco, a evolução prevista é voltar a gerar uma **senha aleatória** e enviá-la por e-mail usando o **SMTP do Inatel**, se o coordenador aprovar ([roadmap](roadmap.md#futuro)).
 
 ### Admin
 
-- Existe **um único** admin, criado pelo seed do Prisma a partir de `ADMIN_LOGIN` e `ADMIN_SENHA` (`.env`).
-- `ADMIN_SENHA` precisa ter **pelo menos 16 caracteres** (o seed recusa senhas menores). O admin é o alvo mais valioso de força bruta: a senha dos alunos é aleatória, a do admin é escolhida por uma pessoa, e o rate limit do login é por IP + login, então não impede tentativas vindas de muitos IPs.
+- Existe **um único** admin, criado pelo seed do Prisma a partir de `ADMIN_EMAIL` e `ADMIN_SENHA` (`.env`).
+- A senha do admin **diferencia maiúsculas** (não passa pela normalização da senha do aluno).
+- `ADMIN_SENHA` precisa ter **pelo menos 16 caracteres** (o seed recusa senhas menores). O admin é o alvo mais valioso: a senha dele é escolhida por uma pessoa, e o rate limit do login é por IP + e-mail, então não impede tentativas vindas de muitos IPs.
 - O seed é idempotente: rodar de novo não duplica o admin.
 - **O admin não troca a senha pelo sistema** (decisão desta primeira versão). A única forma é mudar `ADMIN_SENHA` no `.env` e rodar `npm run db:seed` de novo, o que atualiza o hash.
-- Limitação conhecida: o seed **não** incrementa `token_versao`, então tokens do admin emitidos antes da troca continuam válidos até expirar (`JWT_EXPIRES_IN`). Se a troca de senha do admin entrar no sistema, ela deve incrementar `token_versao`, como acontece na recuperação de senha do aluno.
+- Limitação conhecida: o seed **não** incrementa `token_versao`, então tokens do admin emitidos antes da troca continuam válidos até expirar (`JWT_EXPIRES_IN`). Se a troca de senha do admin entrar no sistema, ela deve incrementar `token_versao`.
 
 ## Swagger
 
@@ -182,6 +173,6 @@ Nos dois casos: gera uma nova senha aleatória, envia por e-mail e incrementa `t
 | ----------------- | ---------------------------------------------- |
 | `JWT_SECRET`      | Segredo de assinatura do token (mín. 32 chars) |
 | `JWT_EXPIRES_IN`  | Validade do token (ex.: `8h`)                  |
-| `ADMIN_LOGIN`     | Login do admin criado pelo seed                |
+| `ADMIN_EMAIL`     | E-mail (login) do admin criado pelo seed       |
 | `ADMIN_SENHA`     | Senha do admin criado pelo seed (mín. 16)      |
 | `SWAGGER_ENABLED` | Expõe `/docs` (`true` em dev, `false` em prod) |

@@ -13,6 +13,8 @@ API REST do SefiTeam.
 
 > TypeScript fixado em `~6.0`: o `typescript-eslint` ainda não suporta o TypeScript 7.
 
+> **`vite` nas devDependencies:** o back não usa o Vite diretamente, mas o Vitest exige o Vite como _peer dependency_ (aceita as versões 6, 7 ou 8). Não remova. Sem ele declarado, o npm instala o Vite implicitamente e, a cada `npm install`, apaga do `package-lock.json` os binários nativos por plataforma (`@rolldown/binding-*`, `lightningcss-*`), e o Vitest para de rodar. Ao atualizar o Vite para uma versão nova principal, confira se o Vitest já a aceita.
+
 **Imports em ESM:** imports relativos levam a extensão `.js`, mesmo apontando para arquivos `.ts`, por exemplo `import { env } from './config/env.js'`. É o padrão do Node em ESM (`moduleResolution: nodenext`). O `verbatimModuleSyntax` está ligado, então imports que são só de tipo usam `import type`.
 
 ## Estrutura
@@ -52,7 +54,7 @@ cd back
 cp .env.example .env
 npm install              # também gera o Prisma Client (postinstall)
 npm run db:migrate       # aplica as migrations no banco local
-npm run db:seed          # cria o admin (ADMIN_LOGIN / ADMIN_SENHA)
+npm run db:seed          # cria o admin (ADMIN_EMAIL / ADMIN_SENHA)
 npm run dev
 ```
 
@@ -72,7 +74,7 @@ Copie `.env.example` para `.env`. As variáveis são validadas ao iniciar (`src/
 | `JWT_SECRET`      | Segredo para assinar os tokens (mín. 32 caracteres; o de exemplo é recusado em produção)            |
 | `JWT_EXPIRES_IN`  | Validade do token (ex.: `8h`)                                                                       |
 | `CORS_ORIGIN`     | Origem do front-end liberada no CORS                                                                |
-| `ADMIN_LOGIN`     | Login do admin criado pelo seed                                                                     |
+| `ADMIN_EMAIL`     | E-mail (login) do admin criado pelo seed                                                            |
 | `ADMIN_SENHA`     | Senha do admin criado pelo seed (mín. 16 caracteres)                                                |
 | `SWAGGER_ENABLED` | Expõe o Swagger em `/docs` (`false` em produção)                                                    |
 
@@ -98,6 +100,7 @@ Copie `.env.example` para `.env`. As variáveis são validadas ao iniciar (`src/
 - Configuração do Prisma em `prisma.config.ts` (o Prisma 7 não lê o `.env` sozinho; o arquivo carrega o `.env` quando ele existe).
 - O Prisma Client é gerado em `src/generated/prisma` (fora do Git) e conecta via driver adapter `@prisma/adapter-pg`.
 - O índice único parcial de `edicao` usa o preview `partialIndexes` direto no schema.
+- A migration `login_por_email` deixa o e-mail obrigatório e remove a coluna `login`. Num banco de desenvolvimento criado antes dela (admin sem e-mail), ela falha: troque `ADMIN_LOGIN` por `ADMIN_EMAIL` no `.env`, rode `npx prisma migrate reset` (apaga os dados locais) e depois `npm run db:seed`.
 - `CHECK(minimo_integrantes <= maximo_integrantes)` foi escrito à mão na migration inicial, porque o Prisma não suporta CHECK no schema. Ao gerar novas migrations, confira se o Prisma não tentou removê-lo.
 
 ## Testes
@@ -110,6 +113,7 @@ Copie `.env.example` para `.env`. As variáveis são validadas ao iniciar (`src/
 - Os testes também são tipados (o ESLint não aceita `any`): o corpo da resposta é lido com `resposta.json<T>()`, usando o tipo inferido do schema Zod da rota, e os erros com `erroDa(resposta)` (`src/test/http.ts`).
 - Variáveis de ambiente de teste ficam no `vitest.config.ts`.
 - `npm run test:watch` roda os testes afetados a cada arquivo salvo; `npm run test:coverage` gera o relatório de cobertura em `coverage/`.
+- **Cobertura mínima** (`vitest.config.ts`): 90% de linhas, instruções e funções e 85% de desvios. O CI roda `npm run test:coverage` e falha abaixo disso.
 
 ## Regras garantidas pela aplicação
 

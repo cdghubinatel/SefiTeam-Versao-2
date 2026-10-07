@@ -17,10 +17,9 @@ erDiagram
 
     usuario {
         int id PK
-        string login UK
+        string email UK "login"
         string senha_hash
         string nome
-        string email "nullable; obrigatório para aluno"
         enum papel "ADMIN | ALUNO"
         string curso "nullable, só aluno"
         string matricula "nullable, só aluno"
@@ -81,9 +80,8 @@ erDiagram
 
 Admins e alunos numa única tabela, diferenciados por `papel`.
 
-- `login` é único. Para alunos: `curso + matrícula` (ex.: `GES589`).
-- `senha_hash`: hash argon2, nunca a senha em texto. A senha do aluno é gerada aleatoriamente e enviada por e-mail (ver [autenticacao.md](autenticacao.md)).
-- `email`: vem da planilha de upload. Obrigatório para alunos (validado na aplicação), opcional para o admin.
+- `email` é o **login**: obrigatório e único para todos. Gravado normalizado (sem espaços nas pontas, em minúsculas), então `Maria@Inatel.br` e `maria@inatel.br` são o mesmo usuário. Para alunos, vem da planilha de upload.
+- `senha_hash`: hash argon2, nunca a senha em texto. A senha do aluno é `curso + matrícula` (ex.: `GES589`); a do admin vem do `.env` (ver [autenticacao.md](autenticacao.md)).
 - `token_versao`: vai dentro do token. Incrementar invalida todos os tokens já emitidos (logout, nova senha).
 - `UNIQUE(curso, matricula)`: o aluno é uma pessoa única, reaproveitada entre edições.
 
