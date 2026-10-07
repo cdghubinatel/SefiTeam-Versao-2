@@ -6,7 +6,8 @@ import { normalizarEmail } from '../src/modules/auth/service.js';
 const seedEnvSchema = z.object({
   DATABASE_URL: z.url(),
   ADMIN_EMAIL: z.email('ADMIN_EMAIL deve ser um e-mail válido'),
-  // O admin é o alvo mais valioso de força bruta (a senha dos alunos é aleatória).
+  // O admin é o alvo mais valioso de força bruta: a senha dele é escolhida por uma pessoa
+  // (ver docs/autenticacao.md).
   ADMIN_SENHA: z.string().min(16, 'ADMIN_SENHA deve ter pelo menos 16 caracteres'),
 });
 
