@@ -44,6 +44,7 @@ npm test                 # Vitest (integração usa o banco sefiteam_test)
 npm run typecheck && npm run lint && npm run format:check
 npm run db:migrate       # nova migration / aplicar no banco local
 npm run db:seed          # admin a partir de ADMIN_EMAIL / ADMIN_SENHA
+npm run db:seed:demo     # edição ativa DEMO com Físicas, alunos e grupo (teste manual de grupos)
 ```
 
 Convenções:
@@ -55,6 +56,8 @@ Convenções:
 - Schemas de resposta com Zod em todas as rotas (eles geram o Swagger); erros documentados com `erroSchema`.
 - Testes `*.test.ts` ao lado do código, importando de `'vitest'`. Unitários mockam o Prisma; os de integração usam `buildApp()` + `app.inject()` e `src/test/db.ts` (`limparBanco`, `criarUsuario`).
 - Login é o **e-mail** (`usuario.email`, único), sempre gravado com `normalizarEmail` (minúsculas). A senha do aluno é `senhaDoAluno({ curso, matricula })` (ex.: `GES589`) e é comparada sem diferenciar maiúsculas; a do admin, exata. Tudo em `src/modules/auth/service.ts`.
+- Testes que precisam de edição/Física/turma/inscrição/grupo: helpers `criarEdicao`, `criarFisica`, `criarAluno`, `inscrever`, `criarGrupo` em `src/test/db.ts`.
+- Busca de alunos por texto: ignora acentos com `unaccent` via `$queryRaw` (ver `alunosDaBusca` em `modules/grupos/service.ts`). Em qualquer `LIKE`/`contains`, passar o texto por `escaparLike` (`src/lib/prisma.ts`), senão `%` e `_` viram curingas.
 - Regras que dependem de contagem ou de prazo (máximo de integrantes, quantidade de grupos, prazo, multiturma) ficam no service, **dentro de transação**.
 
 Armadilhas conhecidas:

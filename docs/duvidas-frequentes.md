@@ -45,10 +45,4 @@ A rota não depende de como o front reordena (setinhas hoje, arrastar e soltar n
 
 ## Pendências de design (Figma)
 
-A tela **Admin/DuvidasFrequentes** hoje só tem "Adicionar" e o lápis de editar. Faltam:
-
-- **Excluir**: ação para apagar uma dúvida (ex.: botão no modal de edição), com confirmação.
-- **Reordenar**: botão "Reordenar" e o modo com setinhas ↑/↓, "Salvar ordem" e "Cancelar", em desktop e mobile.
-- **Modal de adicionar/editar**: o formulário de pergunta e resposta não está desenhado.
-
-As telas mostram "Edição 2026/1" no subtítulo, mas as dúvidas são globais. Se o subtítulo ficar, ele vem da edição ativa, não das dúvidas.
+Excluir, reordenar e o modal de adicionar/editar ainda não estão desenhados: ver [pendencias-design.md](pendencias-design.md#dúvidas-frequentes).

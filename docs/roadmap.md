@@ -13,8 +13,12 @@ O que já está pronto e o que vem a seguir. Atualize este arquivo quando uma et
 
 O front-end só começa quando o back-end estiver finalizado. Ordem combinada:
 
-1. **Grupos**
-   - O aluno cria um grupo ou entra num grupo existente em cada Física, até o prazo.
+1. **Grupos** (em andamento, ver [grupos.md](grupos.md))
+   - [x] Leitura do aluno: minhas Físicas (dashboard), grupos em que pode entrar, colegas disponíveis (busca sem acentos). Seed de demonstração (`npm run db:seed:demo`).
+   - [ ] Criar grupo (com colegas).
+   - [ ] Entrar num grupo.
+   - [ ] Adicionar integrantes (aluno do grupo até o prazo; admin sempre), remover integrante e apagar grupo (admin).
+   - O aluno cria um grupo ou entra num grupo existente em cada Física, até o prazo, e pode adicionar colegas ao seu grupo. Ele não sai do grupo; só o admin remove.
    - Regras: máximo de integrantes, quantidade de grupos por Física, prazo da edição e multiturma.
    - O admin pode adicionar e remover alunos e apagar grupos, inclusive após o prazo.
 2. **Edições e upload da planilha** (aguardando a planilha de exemplo do cliente)
@@ -36,8 +40,7 @@ Se a planilha chegar antes, edições pode passar na frente de grupos.
 
 ## Pendências de design (Figma)
 
-- [ ] **Tela de login**: o campo passa a ser **e-mail** (não mais curso + matrícula).
-- [ ] **Admin/DuvidasFrequentes**: excluir dúvida (com confirmação), modo "Reordenar" (setinhas ↑/↓, "Salvar ordem" e "Cancelar") e o modal de adicionar/editar. Detalhes em [duvidas-frequentes.md](duvidas-frequentes.md#pendências-de-design-figma).
+Lista completa em [pendencias-design.md](pendencias-design.md).
 
 ## Decisões em aberto
 
