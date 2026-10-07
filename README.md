@@ -18,7 +18,7 @@ O professor (admin) cria uma **edição** da feira e faz upload de uma planilha 
 - Um grupo está **formado** quando atinge o mínimo de integrantes. Ele continua aceitando alunos até o máximo.
 - Após o prazo, o aluno não altera mais o grupo; o admin pode adicionar/remover alunos e apagar grupos.
 - **Dúvidas Frequentes** são globais e editadas pelo admin.
-- Login do aluno: `curso + matrícula` (ex.: `GES589`). A senha é gerada aleatoriamente e enviada para o e-mail do aluno, que vem da planilha. O aluno não troca a senha; se esquecer, pede uma nova na tela de login ou o admin reenvia. Detalhes em [docs/autenticacao.md](docs/autenticacao.md).
+- Login do aluno: o **e-mail** (vem da planilha). Senha: **curso + matrícula** (ex.: `GES589`), sem diferenciar maiúsculas. O aluno não troca a senha. Nesta versão o sistema não envia e-mails. Detalhes e riscos em [docs/autenticacao.md](docs/autenticacao.md).
 
 ## Stack
 
@@ -46,7 +46,7 @@ O professor (admin) cria uma **edição** da feira e faz upload de uma planilha 
 
 ## Rodando localmente
 
-Pré-requisitos: Node.js (LTS) e Docker.
+Pré-requisitos: Node.js 24 (LTS; a versão fica no `.nvmrc`, use `nvm use`) e Docker.
 
 ```bash
 # 1. Subir o banco

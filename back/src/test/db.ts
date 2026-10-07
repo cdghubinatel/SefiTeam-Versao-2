@@ -8,15 +8,26 @@ export async function limparBanco(prisma: PrismaClient) {
   );
 }
 
-type NovoUsuario = { login: string; senha: string; papel?: Papel; nome?: string };
+type NovoUsuario = {
+  /** Já normalizado (minúsculas), como o cadastro grava. */
+  email: string;
+  /** Gravada como hash, do jeito que veio (para aluno, use `senhaDoAluno`). */
+  senha: string;
+  papel?: Papel;
+  nome?: string;
+  curso?: string;
+  matricula?: string;
+};
 
 export async function criarUsuario(prisma: PrismaClient, dados: NovoUsuario) {
   return prisma.usuario.create({
     data: {
-      login: dados.login,
+      email: dados.email,
       senhaHash: await argon2.hash(dados.senha),
-      nome: dados.nome ?? dados.login,
+      nome: dados.nome ?? dados.email,
       papel: dados.papel ?? 'ALUNO',
+      curso: dados.curso ?? null,
+      matricula: dados.matricula ?? null,
     },
   });
 }
