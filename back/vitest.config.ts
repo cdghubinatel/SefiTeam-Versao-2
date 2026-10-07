@@ -25,6 +25,8 @@ export default defineConfig({
     coverage: {
       include: ['src/**/*.ts'],
       exclude: ['src/**/*.test.ts', 'src/server.ts', 'src/generated/**', 'src/test/**'],
+      // Mínimo cobrado no CI (npm run test:coverage). Abaixo disso, o comando falha.
+      thresholds: { lines: 90, statements: 90, functions: 90, branches: 85 },
     },
   },
 });

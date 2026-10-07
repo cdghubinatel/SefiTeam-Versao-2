@@ -53,7 +53,8 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          # Mesma versão do Node usada localmente (fonte única).
+          node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: back/package-lock.json
 
@@ -69,8 +70,9 @@ jobs:
       - name: Tipos (tsc)
         run: npm run typecheck
 
-      - name: Testes (Vitest)
-        run: npm test
+      # Falha se a cobertura ficar abaixo do mínimo do vitest.config.ts.
+      - name: Testes e cobertura (Vitest)
+        run: npm run test:coverage
 
       - name: Build
         run: npm run build
