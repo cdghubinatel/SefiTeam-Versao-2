@@ -10,6 +10,11 @@ export function menorNumeroLivre(numerosUsados: readonly number[]) {
   return numero;
 }
 
+/** Depois da data limite, o aluno não altera mais grupos (o admin sim). */
+export function prazoEncerrado(dataLimite: Date, agora = new Date()) {
+  return agora.getTime() > dataLimite.getTime();
+}
+
 /** O grupo está formado quando atinge o mínimo de integrantes da Física. */
 export function estaFormado(quantidadeIntegrantes: number, minimoIntegrantes: number) {
   return quantidadeIntegrantes >= minimoIntegrantes;

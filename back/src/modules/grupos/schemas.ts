@@ -9,6 +9,15 @@ export const colegasQuerySchema = z.object({
   busca: z.string().trim().max(100).optional(),
 });
 
+export const criarGrupoBodySchema = z.object({
+  /** Ids (de aluno) dos colegas que entram junto com quem cria. Vazio = criar sozinho. */
+  colegas: z
+    .array(z.number().int().positive())
+    .max(50)
+    .refine((ids) => new Set(ids).size === ids.length, 'A lista não pode ter ids repetidos.')
+    .default([]),
+});
+
 /** Aluno como aparece nas listas: o front monta "GES 589 · Turma F01-A". */
 export const alunoResumoSchema = z.object({
   id: z.number().int(),
@@ -48,6 +57,7 @@ export const minhasFisicasSchema = z.object({
   ),
 });
 
+export type CriarGrupoBody = z.infer<typeof criarGrupoBodySchema>;
 export type Grupo = z.infer<typeof grupoSchema>;
 export type AlunoResumo = z.infer<typeof alunoResumoSchema>;
 export type MinhasFisicas = z.infer<typeof minhasFisicasSchema>;

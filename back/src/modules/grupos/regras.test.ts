@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { estaFormado, menorNumeroLivre, turmaCompativel } from './regras.js';
+import { estaFormado, menorNumeroLivre, prazoEncerrado, turmaCompativel } from './regras.js';
 
 describe('menorNumeroLivre', () => {
   it.each([
@@ -43,5 +43,22 @@ describe('turmaCompativel', () => {
 
   it('grupo sem integrantes aceita qualquer turma', () => {
     expect(turmaCompativel({ multiturma: false, turmasDoGrupo: [], turmaDoAluno: 2 })).toBe(true);
+  });
+});
+
+describe('prazoEncerrado', () => {
+  const dataLimite = new Date('2026-06-16T23:59:59.000Z');
+
+  it.each([
+    ['antes do prazo', '2026-06-16T23:59:58.999Z', false],
+    ['no instante exato do prazo', '2026-06-16T23:59:59.000Z', false],
+    ['depois do prazo', '2026-06-17T00:00:00.000Z', true],
+  ])('%s', (_caso, agora, esperado) => {
+    expect(prazoEncerrado(dataLimite, new Date(agora))).toBe(esperado);
+  });
+
+  it('usa a hora atual por padrão', () => {
+    expect(prazoEncerrado(new Date(Date.now() + 60_000))).toBe(false);
+    expect(prazoEncerrado(new Date(Date.now() - 60_000))).toBe(true);
   });
 });

@@ -4,11 +4,13 @@ import { erroSchema } from '../../shared/errors/schemas.js';
 import {
   alunoResumoSchema,
   colegasQuerySchema,
+  criarGrupoBodySchema,
   fisicaParamsSchema,
   grupoSchema,
   minhasFisicasSchema,
 } from './schemas.js';
 import {
+  criarGrupo,
   listarColegasDisponiveis,
   listarGruposParaEntrar,
   listarMinhasFisicas,
@@ -85,5 +87,37 @@ export const gruposRoutes: FastifyPluginAsyncZod = async (app) => {
         request.params.fisicaId,
         request.query.busca,
       ),
+  );
+
+  app.post(
+    '/fisicas/:fisicaId/grupos',
+    {
+      config: somenteAluno,
+      schema: {
+        tags: ['grupos'],
+        summary: 'Cria um grupo',
+        description:
+          'Quem cria entra no grupo, junto com os `colegas` escolhidos (ids de aluno; vazio = sozinho), que entram sem precisar aceitar. Recebe o menor número livre na Física. Erros `409`: `PRAZO_ENCERRADO`, `JA_EM_GRUPO` (o aluno ou um colega), `GRUPO_CHEIO`, `TURMA_DIFERENTE`, `LIMITE_DE_GRUPOS`. `404` se a Física não é da edição ativa, se o aluno não está inscrito nela ou se um colega não está.',
+        params: fisicaParamsSchema,
+        body: criarGrupoBodySchema,
+        response: {
+          201: grupoSchema,
+          400: erroSchema,
+          401: erroSchema,
+          403: erroSchema,
+          404: erroSchema,
+          409: erroSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const grupo = await criarGrupo(
+        deps,
+        request.usuario.id,
+        request.params.fisicaId,
+        request.body,
+      );
+      return reply.status(201).send(grupo);
+    },
   );
 };
