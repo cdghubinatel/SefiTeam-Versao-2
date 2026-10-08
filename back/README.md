@@ -80,20 +80,21 @@ Copie `.env.example` para `.env`. As variáveis são validadas ao iniciar (`src/
 
 ## Scripts
 
-| Script                | Descrição                                                                   |
-| --------------------- | --------------------------------------------------------------------------- |
-| `npm run dev`         | Sobe a API em modo desenvolvimento (watch)                                  |
-| `npm run build`       | Compila para JavaScript em `dist/`                                          |
-| `npm start`           | Roda a versão compilada                                                     |
-| `npm run typecheck`   | Checa os tipos sem gerar arquivos                                           |
-| `npm run lint`        | ESLint com regras que usam os tipos (`lint:fix` corrige o que for possível) |
-| `npm run format`      | Formata com Prettier (`format:check` só confere)                            |
-| `npm test`            | Roda os testes (`test:watch`, `test:coverage`)                              |
-| `npm run db:generate` | Gera o Prisma Client em `src/generated/`                                    |
-| `npm run db:migrate`  | Cria/aplica migrations no banco local (dev)                                 |
-| `npm run db:deploy`   | Aplica migrations pendentes (CI/produção)                                   |
-| `npm run db:seed`     | Cria ou atualiza o admin                                                    |
-| `npm run db:studio`   | Abre o Prisma Studio                                                        |
+| Script                 | Descrição                                                                                          |
+| ---------------------- | -------------------------------------------------------------------------------------------------- |
+| `npm run dev`          | Sobe a API em modo desenvolvimento (watch)                                                         |
+| `npm run build`        | Compila para JavaScript em `dist/`                                                                 |
+| `npm start`            | Roda a versão compilada                                                                            |
+| `npm run typecheck`    | Checa os tipos sem gerar arquivos                                                                  |
+| `npm run lint`         | ESLint com regras que usam os tipos (`lint:fix` corrige o que for possível)                        |
+| `npm run format`       | Formata com Prettier (`format:check` só confere)                                                   |
+| `npm test`             | Roda os testes (`test:watch`, `test:coverage`)                                                     |
+| `npm run db:generate`  | Gera o Prisma Client em `src/generated/`                                                           |
+| `npm run db:migrate`   | Cria/aplica migrations no banco local (dev)                                                        |
+| `npm run db:deploy`    | Aplica migrations pendentes (CI/produção)                                                          |
+| `npm run db:seed`      | Cria ou atualiza o admin                                                                           |
+| `npm run db:seed:demo` | Cria a edição ativa `DEMO` com Físicas, alunos e um grupo (só desenvolvimento; ver docs/grupos.md) |
+| `npm run db:studio`    | Abre o Prisma Studio                                                                               |
 
 ## Banco de dados
 
@@ -101,6 +102,7 @@ Copie `.env.example` para `.env`. As variáveis são validadas ao iniciar (`src/
 - O Prisma Client é gerado em `src/generated/prisma` (fora do Git) e conecta via driver adapter `@prisma/adapter-pg`.
 - O índice único parcial de `edicao` usa o preview `partialIndexes` direto no schema.
 - A migration `login_por_email` deixa o e-mail obrigatório e remove a coluna `login`. Num banco de desenvolvimento criado antes dela (admin sem e-mail), ela falha: troque `ADMIN_LOGIN` por `ADMIN_EMAIL` no `.env`, rode `npx prisma migrate reset` (apaga os dados locais) e depois `npm run db:seed`.
+- A extensão `unaccent` (busca sem acentos) é criada à mão na migration `busca_sem_acento`; o schema do Prisma não a declara, e o `migrate diff` a ignora.
 - `CHECK(minimo_integrantes <= maximo_integrantes)` foi escrito à mão na migration inicial, porque o Prisma não suporta CHECK no schema. Ao gerar novas migrations, confira se o Prisma não tentou removê-lo.
 
 ## Testes

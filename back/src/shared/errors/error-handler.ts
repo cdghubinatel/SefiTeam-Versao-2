@@ -10,9 +10,10 @@ function statusDe(erro: unknown) {
 export function registrarErrorHandler(app: FastifyInstance) {
   app.setErrorHandler((erro, request, reply) => {
     if (erro instanceof AppError) {
+      const { codigo, message: mensagem, detalhes } = erro;
       return reply
         .status(erro.statusCode)
-        .send({ erro: { codigo: erro.codigo, mensagem: erro.message } });
+        .send({ erro: detalhes ? { codigo, mensagem, detalhes } : { codigo, mensagem } });
     }
 
     if (hasZodFastifySchemaValidationErrors(erro)) {

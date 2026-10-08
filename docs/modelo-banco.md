@@ -128,9 +128,13 @@ O aluno numa Física: uma linha para cada aba da planilha em que ele aparece.
 
 Global (sem vínculo com edição). `ordem` define a ordem de exibição; não é única, e o `id` desempata. Regras e rotas em [duvidas-frequentes.md](duvidas-frequentes.md).
 
+## Extensões
+
+- `unaccent`: busca de alunos sem diferenciar acentos ("joao" encontra "João"). Criada à mão na migration `busca_sem_acento`, porque o schema do Prisma não declara extensões (o recurso é preview). Usada em `$queryRaw` (ver [grupos.md](grupos.md)).
+
 ## Regras validadas na aplicação
 
-Validadas no back-end, dentro de uma transação com lock no grupo:
+Validadas no back-end, numa transação que começa travando a linha da Física (`SELECT ... FOR UPDATE`; ver [grupos.md](grupos.md#concorrência)):
 
 | Regra                                       | Quando                                             |
 | ------------------------------------------- | -------------------------------------------------- |

@@ -101,18 +101,23 @@ Todos os erros da API seguem o mesmo formato:
 
 `codigo` é estável e serve para o front decidir o que fazer. `mensagem` pode ser exibida ao usuário.
 
-| Status | `codigo`                | Quando                                                               | Front-end                              |
-| ------ | ----------------------- | -------------------------------------------------------------------- | -------------------------------------- |
-| 401    | `CREDENCIAIS_INVALIDAS` | E-mail ou senha errados                                              | Mostra o erro na tela de login         |
-| 401    | `TOKEN_AUSENTE`         | Rota protegida sem header `Authorization`                            | Apaga o token e redireciona a `/login` |
-| 401    | `TOKEN_INVALIDO`        | Token adulterado, expirado, revogado (logout) ou usuário inexistente | Apaga o token e redireciona a `/login` |
-| 403    | `SEM_PERMISSAO`         | Usuário autenticado sem o papel exigido pela rota                    | Tela "sem acesso" (**não** desloga)    |
-| 429    | `MUITAS_TENTATIVAS`     | Rate limit do login excedido                                         | Pede para aguardar e tentar de novo    |
-| 400    | `VALIDACAO`             | Corpo/parâmetros inválidos (lista em `detalhes`)                     | Mostra o erro no campo indicado        |
-| 4xx    | `REQUISICAO_INVALIDA`   | Requisição malformada (ex.: JSON quebrado)                           | Mensagem genérica de erro              |
-| 404    | `NAO_ENCONTRADO`        | Rota inexistente, ou recurso inexistente (ex.: dúvida apagada)       | Mostra a mensagem e recarrega a lista  |
-| 409    | `ORDEM_DESATUALIZADA`   | Reordenar dúvidas com uma lista que não bate com a do banco          | Avisa e recarrega a lista              |
-| 500    | `ERRO_INTERNO`          | Erro inesperado (detalhes só no log do servidor)                     | Mensagem genérica de erro              |
+| Status | `codigo`                | Quando                                                                                | Front-end                              |
+| ------ | ----------------------- | ------------------------------------------------------------------------------------- | -------------------------------------- |
+| 401    | `CREDENCIAIS_INVALIDAS` | E-mail ou senha errados                                                               | Mostra o erro na tela de login         |
+| 401    | `TOKEN_AUSENTE`         | Rota protegida sem header `Authorization`                                             | Apaga o token e redireciona a `/login` |
+| 401    | `TOKEN_INVALIDO`        | Token adulterado, expirado, revogado (logout) ou usuário inexistente                  | Apaga o token e redireciona a `/login` |
+| 403    | `SEM_PERMISSAO`         | Usuário autenticado sem o papel exigido pela rota                                     | Tela "sem acesso" (**não** desloga)    |
+| 429    | `MUITAS_TENTATIVAS`     | Rate limit do login excedido                                                          | Pede para aguardar e tentar de novo    |
+| 400    | `VALIDACAO`             | Corpo/parâmetros inválidos (lista em `detalhes`), pelo schema ou por regra do service | Mostra o erro no campo indicado        |
+| 4xx    | `REQUISICAO_INVALIDA`   | Requisição malformada (ex.: JSON quebrado)                                            | Mensagem genérica de erro              |
+| 404    | `NAO_ENCONTRADO`        | Rota inexistente, ou recurso inexistente (ex.: dúvida apagada)                        | Mostra a mensagem e recarrega a lista  |
+| 409    | `ORDEM_DESATUALIZADA`   | Reordenar dúvidas com uma lista que não bate com a do banco                           | Avisa e recarrega a lista              |
+| 409    | `JA_EM_GRUPO`           | O aluno (ou um colega escolhido) já tem grupo nesta Física ([grupos.md](grupos.md))   | Mostra a mensagem / o grupo dele       |
+| 409    | `PRAZO_ENCERRADO`       | Ação do aluno em grupos depois da data limite da edição                               | Mostra a mensagem; bloqueia as ações   |
+| 409    | `GRUPO_CHEIO`           | O grupo passaria do máximo de integrantes                                             | Mostra a mensagem                      |
+| 409    | `LIMITE_DE_GRUPOS`      | A Física já tem a quantidade máxima de grupos                                         | Mostra a mensagem                      |
+| 409    | `TURMA_DIFERENTE`       | Sem multiturma, aluno de outra turma no grupo                                         | Mostra a mensagem                      |
+| 500    | `ERRO_INTERNO`          | Erro inesperado (detalhes só no log do servidor)                                      | Mensagem genérica de erro              |
 
 Em `VALIDACAO`, `detalhes` traz `[{ "campo": "email", "mensagem": "..." }]`.
 
@@ -149,6 +154,8 @@ Para o tempo de resposta não revelar se um e-mail está cadastrado, o e-mail in
 #### Risco aceito
 
 A senha do aluno **não é secreta**: curso e matrícula são conhecidos pelos colegas, e o e-mail institucional costuma ser fácil de deduzir. Quem souber esses dados de um colega consegue entrar como ele, criar ou sair de grupos em seu nome, e o sistema registra como se tivesse sido o colega. O rate limit do login também não protege contra isso, porque não há o que adivinhar.
+
+O próprio sistema amplia esse risco: nas telas de grupo, **o aluno vê o curso e a matrícula dos colegas** da mesma Física (como no Figma, ver [grupos.md](grupos.md)). Ou seja, qualquer aluno logado tem a senha dos colegas, e só precisa deduzir o e-mail deles. Também foi uma decisão consciente.
 
 Foi uma decisão consciente para esta primeira versão (simplicidade, sem depender de um servidor de e-mail). Para fechar o risco, a evolução prevista é voltar a gerar uma **senha aleatória** e enviá-la por e-mail usando o **SMTP do Inatel**, se o coordenador aprovar ([roadmap](roadmap.md#futuro)).
 

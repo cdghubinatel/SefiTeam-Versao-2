@@ -16,6 +16,7 @@ O professor (admin) cria uma **edição** da feira e faz upload de uma planilha 
 - Um aluno pode estar em **um único grupo** por Física.
 - Multiturma desligado: o grupo só aceita alunos da mesma turma (ex.: só F01-A). Ligado: aceita turmas diferentes da mesma Física (F01-A com F01-B).
 - Um grupo está **formado** quando atinge o mínimo de integrantes. Ele continua aceitando alunos até o máximo.
+- Quem cria um grupo pode incluir colegas sem grupo naquela Física, e qualquer integrante pode adicionar colegas depois (até o máximo). O aluno **não sai** do grupo: só o admin remove integrantes.
 - Após o prazo, o aluno não altera mais o grupo; o admin pode adicionar/remover alunos e apagar grupos.
 - **Dúvidas Frequentes** são globais e editadas pelo admin.
 - Login do aluno: o **e-mail** (vem da planilha). Senha: **curso + matrícula** (ex.: `GES589`), sem diferenciar maiúsculas. O aluno não troca a senha. Nesta versão o sistema não envia e-mails. Detalhes e riscos em [docs/autenticacao.md](docs/autenticacao.md).
@@ -38,6 +39,8 @@ O professor (admin) cria uma **edição** da feira e faz upload de uma planilha 
 │   ├── modelo-banco.md  # Modelo de dados e regras
 │   ├── autenticacao.md  # Login, token e permissões
 │   ├── duvidas-frequentes.md  # Rotas e regras das dúvidas frequentes
+│   ├── grupos.md        # Rotas e regras dos grupos
+│   ├── pendencias-design.md  # O que falta desenhar no Figma
 │   └── roadmap.md       # O que está pronto e próximos passos
 └── docker-compose.yml   # PostgreSQL para desenvolvimento
 ```
@@ -67,6 +70,8 @@ cd front
 - [Modelo do banco de dados](docs/modelo-banco.md)
 - [Autenticação e autorização](docs/autenticacao.md)
 - [Dúvidas frequentes](docs/duvidas-frequentes.md)
+- [Grupos](docs/grupos.md)
+- [Pendências de design](docs/pendencias-design.md)
 - [Roadmap](docs/roadmap.md)
 - [Back-end](back/README.md)
 - [Front-end](front/README.md)

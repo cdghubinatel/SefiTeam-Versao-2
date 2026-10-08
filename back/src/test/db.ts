@@ -31,3 +31,88 @@ export async function criarUsuario(prisma: PrismaClient, dados: NovoUsuario) {
     },
   });
 }
+
+const UM_DIA = 24 * 60 * 60 * 1000;
+
+/** Edição ativa com prazo daqui a 1 dia, salvo se indicado. */
+export function criarEdicao(
+  prisma: PrismaClient,
+  dados: { semestre?: string; ativa?: boolean; dataLimite?: Date } = {},
+) {
+  return prisma.edicao.create({
+    data: {
+      semestre: dados.semestre ?? '2026/1',
+      ativa: dados.ativa ?? true,
+      dataLimite: dados.dataLimite ?? new Date(Date.now() + UM_DIA),
+    },
+  });
+}
+
+type NovaFisica = {
+  codigo?: string;
+  quantidadeGrupos?: number;
+  minimoIntegrantes?: number;
+  maximoIntegrantes?: number;
+  multiturma?: boolean;
+  /** Códigos das turmas (padrão: A e B). */
+  turmas?: string[];
+};
+
+/** Física com suas turmas. `turmas` mapeia o código da turma para o id (ex.: `turmas.A`). */
+export async function criarFisica(prisma: PrismaClient, edicaoId: number, dados: NovaFisica = {}) {
+  const codigo = dados.codigo ?? 'F01';
+  const fisica = await prisma.fisica.create({
+    data: {
+      edicaoId,
+      codigo,
+      nome: `Física ${codigo}`,
+      quantidadeGrupos: dados.quantidadeGrupos ?? 5,
+      minimoIntegrantes: dados.minimoIntegrantes ?? 2,
+      maximoIntegrantes: dados.maximoIntegrantes ?? 4,
+      multiturma: dados.multiturma ?? false,
+      turmas: { create: (dados.turmas ?? ['A', 'B']).map((turma) => ({ codigo: turma })) },
+    },
+    include: { turmas: true },
+  });
+
+  const turmas: Record<string, number> = {};
+  for (const turma of fisica.turmas) {
+    turmas[turma.codigo] = turma.id;
+  }
+  return { ...fisica, turmas };
+}
+
+/** Aluno com curso GES; e-mail e nome derivados da matrícula, salvo se indicado. */
+export function criarAluno(prisma: PrismaClient, matricula: string, nome?: string) {
+  return criarUsuario(prisma, {
+    email: `aluno${matricula}@teste.local`,
+    senha: `GES${matricula}`,
+    nome: nome ?? `Aluno ${matricula}`,
+    curso: 'GES',
+    matricula,
+  });
+}
+
+export function inscrever(
+  prisma: PrismaClient,
+  dados: { alunoId: number; fisicaId: number; turmaId: number },
+) {
+  return prisma.inscricao.create({ data: dados });
+}
+
+/** Grupo com os alunos indicados (já inscritos na Física), na ordem de entrada. */
+export async function criarGrupo(
+  prisma: PrismaClient,
+  dados: { fisicaId: number; numero: number; alunoIds: number[] },
+) {
+  const grupo = await prisma.grupo.create({
+    data: { fisicaId: dados.fisicaId, numero: dados.numero },
+  });
+  for (const [posicao, alunoId] of dados.alunoIds.entries()) {
+    await prisma.inscricao.update({
+      where: { alunoId_fisicaId: { alunoId, fisicaId: dados.fisicaId } },
+      data: { grupoId: grupo.id, entrouNoGrupoEm: new Date(Date.now() + posicao) },
+    });
+  }
+  return grupo;
+}
