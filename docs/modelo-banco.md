@@ -134,7 +134,7 @@ Global (sem vínculo com edição). `ordem` define a ordem de exibição; não �
 
 ## Regras validadas na aplicação
 
-Validadas no back-end, dentro de uma transação com lock no grupo:
+Validadas no back-end, numa transação que começa travando a linha da Física (`SELECT ... FOR UPDATE`; ver [grupos.md](grupos.md#concorrência)):
 
 | Regra                                       | Quando                                             |
 | ------------------------------------------- | -------------------------------------------------- |

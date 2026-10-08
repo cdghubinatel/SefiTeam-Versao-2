@@ -15,7 +15,7 @@ O front-end só começa quando o back-end estiver finalizado. Ordem combinada:
 
 1. **Grupos** (em andamento, ver [grupos.md](grupos.md))
    - [x] Leitura do aluno: minhas Físicas (dashboard), grupos em que pode entrar, colegas disponíveis (busca sem acentos). Seed de demonstração (`npm run db:seed:demo`).
-   - [ ] Criar grupo (com colegas).
+   - [x] Criar grupo (com colegas), com lock na Física e testes de concorrência.
    - [ ] Entrar num grupo.
    - [ ] Adicionar integrantes (aluno do grupo até o prazo; admin sempre), remover integrante e apagar grupo (admin).
    - O aluno cria um grupo ou entra num grupo existente em cada Física, até o prazo, e pode adicionar colegas ao seu grupo. Ele não sai do grupo; só o admin remove.
