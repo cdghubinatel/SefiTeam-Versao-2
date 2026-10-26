@@ -3,6 +3,7 @@
  * Só para desenvolvimento: recria a edição "DEMO" (ativa) e cadastra alunos de exemplo.
  * Uso: npm run db:seed:demo
  */
+import '../src/config/zod.js';
 import argon2 from 'argon2';
 import { z } from 'zod';
 import { criarPrismaClient } from '../src/lib/prisma.js';

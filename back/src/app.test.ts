@@ -1,6 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from './app.js';
+import { loginBodySchema } from './modules/auth/schemas.js';
+import { erroDa } from './test/http.js';
+import { mensagemDoZod } from './test/zod.js';
 
 describe('app', () => {
   let app: FastifyInstance;
@@ -23,6 +26,18 @@ describe('app', () => {
 
     expect(resposta.statusCode).toBe(200);
     expect(resposta.json()).toEqual({ status: 'ok' });
+  });
+
+  it('as mensagens de validação da API saem em português', async () => {
+    const payload = { email: 'nao-e-email', senha: 'x' };
+
+    const resposta = await app.inject({ method: 'POST', url: '/auth/login', payload });
+
+    expect(resposta.statusCode).toBe(400);
+    // Texto calculado pelo próprio Zod (ver src/test/zod.ts), sem depender da tradução exata.
+    expect(erroDa(resposta).detalhes).toEqual([
+      { campo: 'email', mensagem: mensagemDoZod(loginBodySchema, payload, 'ptBR') },
+    ]);
   });
 
   it('responde 500 ERRO_INTERNO genérico, sem vazar detalhes do erro', async () => {

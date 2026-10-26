@@ -1,3 +1,5 @@
+// Primeiro: as mensagens do Zod em português valem também para a validação do ambiente.
+import './zod.js';
 import { z } from 'zod';
 
 const booleano = z.enum(['true', 'false']).transform((valor) => valor === 'true');
