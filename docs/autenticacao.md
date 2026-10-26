@@ -115,11 +115,12 @@ Todos os erros da API seguem o mesmo formato:
 | 409    | `JA_EM_GRUPO`           | O aluno (ou um colega escolhido) já tem grupo nesta Física ([grupos.md](grupos.md))   | Mostra a mensagem / o grupo dele       |
 | 409    | `PRAZO_ENCERRADO`       | Ação do aluno em grupos depois da data limite da edição                               | Mostra a mensagem; bloqueia as ações   |
 | 409    | `GRUPO_CHEIO`           | O grupo passaria do máximo de integrantes                                             | Mostra a mensagem                      |
+| 409    | `GRUPO_INCOMPLETO`      | Criar grupo abaixo do mínimo de integrantes (todo grupo nasce formado)                | Pede para selecionar mais colegas      |
 | 409    | `LIMITE_DE_GRUPOS`      | A Física já tem a quantidade máxima de grupos                                         | Mostra a mensagem                      |
 | 409    | `TURMA_DIFERENTE`       | Sem multiturma, aluno de outra turma no grupo                                         | Mostra a mensagem                      |
 | 500    | `ERRO_INTERNO`          | Erro inesperado (detalhes só no log do servidor)                                      | Mensagem genérica de erro              |
 
-Em `VALIDACAO`, `detalhes` traz `[{ "campo": "email", "mensagem": "..." }]`.
+Em `VALIDACAO`, `detalhes` traz `[{ "campo": "email", "mensagem": "..." }]`. As mensagens de `detalhes` saem em **português** (tradução pt-BR do próprio Zod, configurada em `back/src/config/zod.ts` com `z.config(z.locales.ptBR())`), por exemplo "Formato do endereço de e-mail inválido". O front pode mostrá-las direto no campo; os códigos (`codigo`) não mudam.
 
 A mensagem de `CREDENCIAIS_INVALIDAS` é sempre genérica ("E-mail ou senha inválidos."). Ela não revela se o e-mail está cadastrado.
 
