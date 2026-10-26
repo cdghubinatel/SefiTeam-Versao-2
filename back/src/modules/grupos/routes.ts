@@ -6,11 +6,13 @@ import {
   colegasQuerySchema,
   criarGrupoBodySchema,
   fisicaParamsSchema,
+  grupoParamsSchema,
   grupoSchema,
   minhasFisicasSchema,
 } from './schemas.js';
 import {
   criarGrupo,
+  entrarNoGrupo,
   listarColegasDisponiveis,
   listarGruposParaEntrar,
   listarMinhasFisicas,
@@ -119,5 +121,28 @@ export const gruposRoutes: FastifyPluginAsyncZod = async (app) => {
       );
       return reply.status(201).send(grupo);
     },
+  );
+
+  app.post(
+    '/grupos/:grupoId/entrar',
+    {
+      config: somenteAluno,
+      schema: {
+        tags: ['grupos'],
+        summary: 'Entra num grupo',
+        description:
+          'O aluno entra no grupo e recebe o grupo atualizado. Erros, na ordem: `404` (grupo inexistente, de edição inativa ou de Física em que o aluno não está inscrito), `409 PRAZO_ENCERRADO`, `409 JA_EM_GRUPO`, `409 GRUPO_CHEIO`, `409 TURMA_DIFERENTE`.',
+        params: grupoParamsSchema,
+        response: {
+          200: grupoSchema,
+          400: erroSchema,
+          401: erroSchema,
+          403: erroSchema,
+          404: erroSchema,
+          409: erroSchema,
+        },
+      },
+    },
+    async (request) => entrarNoGrupo(deps, request.usuario.id, request.params.grupoId),
   );
 };

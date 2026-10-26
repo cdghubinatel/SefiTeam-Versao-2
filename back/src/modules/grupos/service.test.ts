@@ -9,6 +9,7 @@ import {
 } from '../../shared/errors/app-error.js';
 import {
   criarGrupo,
+  entrarNoGrupo,
   listarColegasDisponiveis,
   listarGruposParaEntrar,
   listarMinhasFisicas,
@@ -30,7 +31,7 @@ function inscricao(dados: Partial<InscricaoMock> = {}): InscricaoMock {
 }
 
 /** Grupo como o Prisma devolve com `selectGrupo`. */
-function grupoDoBanco(id: number, turmasDosIntegrantes: number[]) {
+function grupoDoBanco(id: number, turmasDosIntegrantes: readonly number[]) {
   return {
     id,
     numero: id,
@@ -333,5 +334,136 @@ describe('criarGrupo', () => {
     await expect(criarGrupo(deps, 1, 10, { colegas: [7] })).rejects.toThrow(
       'Ana já está em um grupo nesta Física.',
     );
+  });
+});
+
+describe('entrarNoGrupo', () => {
+  const amanha = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+  type Opcoes = {
+    existeAntes?: boolean;
+    existeDepoisDoLock?: boolean;
+    turmasDosIntegrantes?: readonly number[];
+    inscricaoDoAluno?: object | null;
+  };
+
+  function inscricaoNaFisica(
+    dados: {
+      grupoId?: number | null;
+      multiturma?: boolean;
+      maximo?: number;
+      dataLimite?: Date;
+    } = {},
+  ) {
+    return {
+      turmaId: 1,
+      grupoId: dados.grupoId ?? null,
+      fisica: {
+        multiturma: dados.multiturma ?? false,
+        maximoIntegrantes: dados.maximo ?? 3,
+        quantidadeGrupos: 5,
+        edicao: { dataLimite: dados.dataLimite ?? amanha },
+      },
+    };
+  }
+
+  /** Prisma com a leitura fora da transação e um `tx` mockado dentro dela. */
+  function prismaDoGrupo({
+    existeAntes = true,
+    existeDepoisDoLock = true,
+    turmasDosIntegrantes = [1],
+    inscricaoDoAluno = inscricaoNaFisica(),
+  }: Opcoes = {}) {
+    const grupoAtual = grupoDoBanco(20, turmasDosIntegrantes);
+    const tx = {
+      $queryRaw: vi.fn().mockResolvedValue([]),
+      grupo: {
+        findUnique: vi.fn().mockResolvedValue(existeDepoisDoLock ? grupoAtual : null),
+        findUniqueOrThrow: vi.fn().mockResolvedValue(grupoAtual),
+      },
+      inscricao: {
+        findFirst: vi.fn().mockResolvedValue(inscricaoDoAluno),
+        update: vi.fn().mockResolvedValue({}),
+      },
+    };
+    const $transaction = vi.fn((callback: (cliente: typeof tx) => unknown) => callback(tx));
+    const prisma = {
+      grupo: { findUnique: vi.fn().mockResolvedValue(existeAntes ? { fisicaId: 10 } : null) },
+      $transaction,
+    };
+    return { tx, $transaction, deps: { prisma: prisma as never } };
+  }
+
+  it('trava a Física do grupo antes de reler o grupo e a inscrição', async () => {
+    const { tx, deps } = prismaDoGrupo();
+
+    await entrarNoGrupo(deps, 1, 20);
+
+    const [, fisicaId] = tx.$queryRaw.mock.calls[0] as [TemplateStringsArray, number];
+    expect(fisicaId).toBe(10);
+    const ordemDoLock = tx.$queryRaw.mock.invocationCallOrder[0]!;
+    expect(ordemDoLock).toBeLessThan(tx.grupo.findUnique.mock.invocationCallOrder[0]!);
+    expect(ordemDoLock).toBeLessThan(tx.inscricao.findFirst.mock.invocationCallOrder[0]!);
+  });
+
+  it('grava o grupo e a data de entrada na inscrição do aluno', async () => {
+    const { tx, deps } = prismaDoGrupo();
+
+    await expect(entrarNoGrupo(deps, 1, 20)).resolves.toMatchObject({ id: 20 });
+
+    expect(tx.inscricao.update).toHaveBeenCalledWith({
+      where: { alunoId_fisicaId: { alunoId: 1, fisicaId: 10 } },
+      data: { grupoId: 20, entrouNoGrupoEm: expect.any(Date) as Date },
+    });
+  });
+
+  it('lança NaoEncontrado sem abrir transação se o grupo não existe', async () => {
+    const { $transaction, deps } = prismaDoGrupo({ existeAntes: false });
+
+    await expect(entrarNoGrupo(deps, 1, 20)).rejects.toEqual(
+      new NaoEncontrado('Grupo não encontrado.'),
+    );
+    expect($transaction).not.toHaveBeenCalled();
+  });
+
+  it('lança NaoEncontrado se o grupo some enquanto espera o lock', async () => {
+    const { tx, deps } = prismaDoGrupo({ existeDepoisDoLock: false });
+
+    await expect(entrarNoGrupo(deps, 1, 20)).rejects.toBeInstanceOf(NaoEncontrado);
+    expect(tx.inscricao.update).not.toHaveBeenCalled();
+  });
+
+  it('com multiturma, entra num grupo de outra turma', async () => {
+    const { tx, deps } = prismaDoGrupo({
+      turmasDosIntegrantes: [2],
+      inscricaoDoAluno: inscricaoNaFisica({ multiturma: true }),
+    });
+
+    await entrarNoGrupo(deps, 1, 20);
+
+    expect(tx.inscricao.update).toHaveBeenCalled();
+  });
+
+  it.each([
+    ['aluno não inscrito ou edição inativa', { inscricaoDoAluno: null }, NaoEncontrado],
+    [
+      'prazo encerrado',
+      { inscricaoDoAluno: inscricaoNaFisica({ dataLimite: new Date(Date.now() - 1000) }) },
+      PrazoEncerrado,
+    ],
+    ['aluno já tem grupo', { inscricaoDoAluno: inscricaoNaFisica({ grupoId: 7 }) }, JaEmGrupo],
+    ['grupo cheio', { turmasDosIntegrantes: [1, 1, 1] }, GrupoCheio],
+    ['grupo de outra turma', { turmasDosIntegrantes: [2] }, TurmaDiferente],
+  ] as const)('lança erro quando %s, sem gravar nada', async (_caso, opcoes, Erro) => {
+    const { tx, deps } = prismaDoGrupo(opcoes);
+
+    await expect(entrarNoGrupo(deps, 1, 20)).rejects.toBeInstanceOf(Erro);
+    expect(tx.inscricao.update).not.toHaveBeenCalled();
+  });
+
+  it('o 404 de inscrição usa a mensagem de grupo, não a de Física', async () => {
+    const { deps } = prismaDoGrupo({ inscricaoDoAluno: null });
+
+    await expect(entrarNoGrupo(deps, 1, 20)).rejects.toThrow('Grupo não encontrado.');
   });
 });

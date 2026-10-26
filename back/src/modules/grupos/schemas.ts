@@ -4,6 +4,8 @@ const id = z.coerce.number().int().positive();
 
 export const fisicaParamsSchema = z.object({ fisicaId: id });
 
+export const grupoParamsSchema = z.object({ grupoId: id });
+
 export const colegasQuerySchema = z.object({
   /** Parte do nome ou da matrícula, sem diferenciar maiúsculas nem acentos. Vazio = todos. */
   busca: z.string().trim().max(100).optional(),
