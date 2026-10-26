@@ -4,13 +4,18 @@ const id = z.coerce.number().int().positive();
 
 export const fisicaParamsSchema = z.object({ fisicaId: id });
 
+export const grupoParamsSchema = z.object({ grupoId: id });
+
 export const colegasQuerySchema = z.object({
   /** Parte do nome ou da matrícula, sem diferenciar maiúsculas nem acentos. Vazio = todos. */
   busca: z.string().trim().max(100).optional(),
 });
 
 export const criarGrupoBodySchema = z.object({
-  /** Ids (de aluno) dos colegas que entram junto com quem cria. Vazio = criar sozinho. */
+  /**
+   * Ids (de aluno) dos colegas que entram junto com quem cria. Quem cria + colegas precisa
+   * atingir o mínimo da Física; vazio só passa se o mínimo for 1.
+   */
   colegas: z
     .array(z.number().int().positive())
     .max(50)

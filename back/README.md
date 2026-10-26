@@ -109,11 +109,12 @@ Copie `.env.example` para `.env`. As variáveis são validadas ao iniciar (`src/
 
 - Vitest (`vitest.config.ts`). Os arquivos `*.test.ts` ficam ao lado do código testado. As funções (`describe`, `it`, `expect`, `vi`...) são importadas explicitamente de `'vitest'`.
 - **Unitários** (ex.: `service.test.ts`): dependências mockadas, sem banco.
-- **Integração** (ex.: `routes.test.ts`): `buildApp()` + `app.inject()` contra um banco real, sem subir servidor HTTP.
+- **Integração** (ex.: `routes.test.ts`): `buildApp()` + `app.inject()` contra um banco real, sem subir servidor HTTP. Quando um módulo tem muitas rotas, os testes de integração ficam um arquivo por rota, `routes.<rota>.test.ts` (ex.: `modules/grupos/routes.entrar.test.ts`), com os helpers comuns em `src/test/` (`requisicaoComo`, `criarCenarioDeGrupos`).
 - Os testes de integração usam o banco **`sefiteam_test`**, separado do de desenvolvimento. Ele é criado e migrado automaticamente pelo `vitest.global-setup.ts`, que se recusa a rodar se o `DATABASE_URL` não terminar em `_test`. Por isso o `npm test` precisa do Docker ligado.
 - Cada arquivo de teste limpa o banco antes de cada caso (`src/test/db.ts`). Os arquivos rodam um por vez (`fileParallelism: false`), porque compartilham o banco.
 - Os testes também são tipados (o ESLint não aceita `any`): o corpo da resposta é lido com `resposta.json<T>()`, usando o tipo inferido do schema Zod da rota, e os erros com `erroDa(resposta)` (`src/test/http.ts`).
 - Variáveis de ambiente de teste ficam no `vitest.config.ts`.
+- As mensagens de validação do Zod saem em português: `z.config(z.locales.ptBR())` em `src/config/zod.ts`, o primeiro import de `src/config/env.ts` e dos seeds (configuração global do Zod, sem dependência extra). Nos testes, não compare o texto da tradução: calcule a mensagem esperada com `mensagemDoZod` (`src/test/zod.ts`), assim uma atualização do Zod não quebra o teste.
 - `npm run test:watch` roda os testes afetados a cada arquivo salvo; `npm run test:coverage` gera o relatório de cobertura em `coverage/`.
 - **Cobertura mínima** (`vitest.config.ts`): 90% de linhas, instruções e funções e 85% de desvios. O CI roda `npm run test:coverage` e falha abaixo disso.
 

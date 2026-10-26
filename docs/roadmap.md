@@ -15,8 +15,9 @@ O front-end só começa quando o back-end estiver finalizado. Ordem combinada:
 
 1. **Grupos** (em andamento, ver [grupos.md](grupos.md))
    - [x] Leitura do aluno: minhas Físicas (dashboard), grupos em que pode entrar, colegas disponíveis (busca sem acentos). Seed de demonstração (`npm run db:seed:demo`).
-   - [x] Criar grupo (com colegas), com lock na Física e testes de concorrência.
-   - [ ] Entrar num grupo.
+   - [x] Criar grupo (com colegas), com lock na Física e testes de concorrência. O grupo já nasce formado (`GRUPO_INCOMPLETO` abaixo do mínimo).
+   - [x] Entrar num grupo, com testes de concorrência (última vaga, clique duplo, criar e entrar ao mesmo tempo).
+   - [x] Mensagens de validação do Zod em português (`z.locales.ptBR`).
    - [ ] Adicionar integrantes (aluno do grupo até o prazo; admin sempre), remover integrante e apagar grupo (admin).
    - O aluno cria um grupo ou entra num grupo existente em cada Física, até o prazo, e pode adicionar colegas ao seu grupo. Ele não sai do grupo; só o admin remove.
    - Regras: máximo de integrantes, quantidade de grupos por Física, prazo da edição e multiturma.

@@ -85,6 +85,17 @@ export class GrupoCheio extends AppError {
   }
 }
 
+/** O grupo seria criado abaixo do mínimo de integrantes da Física (todo grupo nasce formado). */
+export class GrupoIncompleto extends AppError {
+  constructor(minimoIntegrantes: number) {
+    super(
+      409,
+      'GRUPO_INCOMPLETO',
+      `O grupo precisa ter pelo menos ${minimoIntegrantes} integrantes. Selecione mais colegas.`,
+    );
+  }
+}
+
 /** A Física já tem a quantidade máxima de grupos. */
 export class LimiteDeGrupos extends AppError {
   constructor() {
