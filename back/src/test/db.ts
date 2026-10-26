@@ -48,7 +48,7 @@ export function criarEdicao(
   });
 }
 
-type NovaFisica = {
+export type NovaFisica = {
   codigo?: string;
   quantidadeGrupos?: number;
   minimoIntegrantes?: number;
@@ -115,4 +115,24 @@ export async function criarGrupo(
     });
   }
   return grupo;
+}
+
+/**
+ * Cenário base dos testes de grupos: edição ativa com a F01 (turmas A e B, sem multiturma,
+ * máximo 3, salvo se indicado) e o aluno "eu" (matrícula 100) na turma A.
+ * `alunoNaF01` cadastra mais alunos já inscritos na F01.
+ */
+export async function criarCenarioDeGrupos(prisma: PrismaClient, fisica: NovaFisica = {}) {
+  const edicao = await criarEdicao(prisma);
+  const f01 = await criarFisica(prisma, edicao.id, { maximoIntegrantes: 3, ...fisica });
+  const eu = await criarAluno(prisma, '100', 'Eu Mesmo');
+  await inscrever(prisma, { alunoId: eu.id, fisicaId: f01.id, turmaId: f01.turmas.A! });
+
+  async function alunoNaF01(matricula: string, turma: 'A' | 'B', nome?: string) {
+    const aluno = await criarAluno(prisma, matricula, nome);
+    await inscrever(prisma, { alunoId: aluno.id, fisicaId: f01.id, turmaId: f01.turmas[turma]! });
+    return aluno;
+  }
+
+  return { edicao, f01, eu, alunoNaF01 };
 }
