@@ -66,10 +66,11 @@ describe('POST /fisicas/:fisicaId/grupos', () => {
     return app.prisma.grupo.count({ where: { fisicaId } });
   }
 
-  it('cria sozinho: grupo 1, quem cria é o único integrante e o autor', async () => {
-    const { f01, eu } = await cenario({ minimoIntegrantes: 2 });
+  it('cria com o mínimo exato: grupo 1, já formado, autor = quem cria', async () => {
+    const { f01, eu, alunoNaF01 } = await cenario({ minimoIntegrantes: 2 });
+    const ana = await alunoNaF01('201', 'A', 'Ana');
 
-    const resposta = await criar(f01.id, { colegas: [] }, eu);
+    const resposta = await criar(f01.id, { colegas: [ana.id] }, eu);
 
     expect(resposta.statusCode).toBe(201);
     const grupo = resposta.json<Grupo>();
@@ -77,8 +78,11 @@ describe('POST /fisicas/:fisicaId/grupos', () => {
       id: expect.any(Number) as number,
       numero: 1,
       fisicaId: f01.id,
-      formado: false,
-      integrantes: [{ id: eu.id, nome: 'Eu Mesmo', curso: 'GES', matricula: '100', turma: 'A' }],
+      formado: true,
+      integrantes: [
+        { id: ana.id, nome: 'Ana', curso: 'GES', matricula: '201', turma: 'A' },
+        { id: eu.id, nome: 'Eu Mesmo', curso: 'GES', matricula: '100', turma: 'A' },
+      ],
     });
     const noBanco = await app.prisma.grupo.findUniqueOrThrow({ where: { id: grupo.id } });
     expect(noBanco.criadoPorId).toBe(eu.id);
@@ -86,13 +90,37 @@ describe('POST /fisicas/:fisicaId/grupos', () => {
     expect(inscricao.entrouNoGrupoEm).toBeInstanceOf(Date);
   });
 
-  it('aceita o corpo sem colegas (cria sozinho)', async () => {
-    const { f01, eu } = await cenario();
+  it.each([
+    ['sozinho, com mínimo 2', { minimoIntegrantes: 2 }, 0, 2],
+    ['com 1 colega, com mínimo 3', { minimoIntegrantes: 3 }, 1, 3],
+  ])(
+    'responde 409 GRUPO_INCOMPLETO ao criar %s, sem criar nada',
+    async (_caso, fisica, quantidadeDeColegas, minimo) => {
+      const { f01, eu, alunoNaF01 } = await cenario(fisica);
+      const colegas = [];
+      for (let indice = 0; indice < quantidadeDeColegas; indice += 1) {
+        colegas.push((await alunoNaF01(String(201 + indice), 'A')).id);
+      }
+
+      const resposta = await criar(f01.id, { colegas }, eu);
+
+      expect(resposta.statusCode).toBe(409);
+      expect(erroDa(resposta)).toEqual({
+        codigo: 'GRUPO_INCOMPLETO',
+        mensagem: `O grupo precisa ter pelo menos ${minimo} integrantes. Selecione mais colegas.`,
+      });
+      expect(await contarGrupos(f01.id)).toBe(0);
+      expect(await grupoDe(f01.id, eu)).toEqual([null]);
+    },
+  );
+
+  it('cria sozinho (inclusive com o corpo vazio) quando o mínimo da Física é 1', async () => {
+    const { f01, eu } = await cenario({ minimoIntegrantes: 1 });
 
     const resposta = await criar(f01.id, {}, eu);
 
     expect(resposta.statusCode).toBe(201);
-    expect(resposta.json<Grupo>().integrantes).toHaveLength(1);
+    expect(resposta.json<Grupo>()).toMatchObject({ formado: true, integrantes: [{ id: eu.id }] });
   });
 
   it('cria com colegas até o máximo, e eles entram no grupo', async () => {
@@ -124,7 +152,7 @@ describe('POST /fisicas/:fisicaId/grupos', () => {
   });
 
   it('recebe o menor número livre na Física', async () => {
-    const { f01, eu, alunoNaF01 } = await cenario();
+    const { f01, eu, alunoNaF01 } = await cenario({ minimoIntegrantes: 1 });
     const ana = await alunoNaF01('201', 'A');
     const bia = await alunoNaF01('202', 'A');
     await criarGrupo(app.prisma, { fisicaId: f01.id, numero: 1, alunoIds: [ana.id] });
@@ -228,7 +256,7 @@ describe('POST /fisicas/:fisicaId/grupos', () => {
   });
 
   it('responde 409 LIMITE_DE_GRUPOS quando a Física já tem todos os grupos', async () => {
-    const { f01, eu, alunoNaF01 } = await cenario({ quantidadeGrupos: 1 });
+    const { f01, eu, alunoNaF01 } = await cenario({ quantidadeGrupos: 1, minimoIntegrantes: 1 });
     const ana = await alunoNaF01('201', 'A');
     await criarGrupo(app.prisma, { fisicaId: f01.id, numero: 1, alunoIds: [ana.id] });
 
@@ -330,7 +358,7 @@ describe('POST /fisicas/:fisicaId/grupos', () => {
     }
 
     it('dois alunos criando o último grupo: só um consegue', async () => {
-      const { f01, eu, alunoNaF01 } = await cenario({ quantidadeGrupos: 1 });
+      const { f01, eu, alunoNaF01 } = await cenario({ quantidadeGrupos: 1, minimoIntegrantes: 1 });
       const outro = await alunoNaF01('201', 'A');
 
       const respostas = await Promise.all([
@@ -361,7 +389,7 @@ describe('POST /fisicas/:fisicaId/grupos', () => {
     });
 
     it('clique duplo do mesmo aluno: cria um grupo só', async () => {
-      const { f01, eu } = await cenario();
+      const { f01, eu } = await cenario({ minimoIntegrantes: 1 });
 
       const respostas = await Promise.all([
         criar(f01.id, { colegas: [] }, eu),

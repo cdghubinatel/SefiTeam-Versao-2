@@ -341,7 +341,7 @@ describe('POST /grupos/:grupoId/entrar', () => {
     });
 
     it('o mesmo aluno criando e entrando ao mesmo tempo: só uma ação vale', async () => {
-      const { f01, eu, alunoNaF01 } = await cenario();
+      const { f01, eu, alunoNaF01 } = await cenario({ minimoIntegrantes: 1 });
       const ana = await alunoNaF01('201', 'A');
       const grupo = await criarGrupo(app.prisma, {
         fisicaId: f01.id,

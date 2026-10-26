@@ -99,7 +99,7 @@ export const gruposRoutes: FastifyPluginAsyncZod = async (app) => {
         tags: ['grupos'],
         summary: 'Cria um grupo',
         description:
-          'Quem cria entra no grupo, junto com os `colegas` escolhidos (ids de aluno; vazio = sozinho), que entram sem precisar aceitar. Recebe o menor número livre na Física. Erros `409`: `PRAZO_ENCERRADO`, `JA_EM_GRUPO` (o aluno ou um colega), `GRUPO_CHEIO`, `TURMA_DIFERENTE`, `LIMITE_DE_GRUPOS`. `404` se a Física não é da edição ativa, se o aluno não está inscrito nela ou se um colega não está.',
+          'Quem cria entra no grupo, junto com os `colegas` escolhidos (ids de aluno), que entram sem precisar aceitar. O grupo já nasce formado: quem cria + colegas precisa atingir o mínimo de integrantes da Física. Recebe o menor número livre na Física. Erros `409`: `PRAZO_ENCERRADO`, `JA_EM_GRUPO` (o aluno ou um colega), `GRUPO_CHEIO`, `GRUPO_INCOMPLETO`, `TURMA_DIFERENTE`, `LIMITE_DE_GRUPOS`. `404` se a Física não é da edição ativa, se o aluno não está inscrito nela ou se um colega não está.',
         params: fisicaParamsSchema,
         body: criarGrupoBodySchema,
         response: {

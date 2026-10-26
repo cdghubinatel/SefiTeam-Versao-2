@@ -3,6 +3,7 @@ import { escaparLike } from '../../lib/prisma.js';
 import {
   DadosInvalidos,
   GrupoCheio,
+  GrupoIncompleto,
   JaEmGrupo,
   LimiteDeGrupos,
   NaoEncontrado,
@@ -70,6 +71,7 @@ async function inscricaoNaEdicaoAtiva(
       fisica: {
         select: {
           multiturma: true,
+          minimoIntegrantes: true,
           maximoIntegrantes: true,
           quantidadeGrupos: true,
           edicao: { select: { dataLimite: true } },
@@ -244,7 +246,8 @@ async function validarColegas(
 
 /**
  * O aluno cria um grupo na Física e entra nele, junto com os colegas escolhidos (que entram
- * sem precisar aceitar). Tudo numa transação, com a Física travada.
+ * sem precisar aceitar). O grupo já nasce com o mínimo de integrantes (formado).
+ * Tudo numa transação, com a Física travada.
  */
 export async function criarGrupo(
   { prisma }: DepsComTransacao,
@@ -272,6 +275,10 @@ export async function criarGrupo(
     }
     if (1 + colegas.length > fisica.maximoIntegrantes) {
       throw new GrupoCheio(fisica.maximoIntegrantes);
+    }
+    // Todo grupo nasce formado: quem cria escolhe colegas até atingir o mínimo da Física.
+    if (1 + colegas.length < fisica.minimoIntegrantes) {
+      throw new GrupoIncompleto(fisica.minimoIntegrantes);
     }
     await validarColegas(tx, fisicaId, colegas, { turmaId, multiturma: fisica.multiturma });
 

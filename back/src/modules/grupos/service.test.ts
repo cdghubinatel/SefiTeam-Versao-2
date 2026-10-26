@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   GrupoCheio,
+  GrupoIncompleto,
   JaEmGrupo,
   LimiteDeGrupos,
   NaoEncontrado,
@@ -193,6 +194,7 @@ describe('criarGrupo', () => {
 
   type Opcoes = {
     multiturma?: boolean;
+    minimoIntegrantes?: number;
     maximoIntegrantes?: number;
     quantidadeGrupos?: number;
     dataLimite?: Date;
@@ -208,6 +210,7 @@ describe('criarGrupo', () => {
   /** Prisma cujo `$transaction` executa o callback com um `tx` mockado. */
   function transacao({
     multiturma = false,
+    minimoIntegrantes = 1,
     maximoIntegrantes = 3,
     quantidadeGrupos = 5,
     dataLimite = amanha,
@@ -221,7 +224,13 @@ describe('criarGrupo', () => {
         findFirst: vi.fn().mockResolvedValue({
           turmaId: 1,
           grupoId: meuGrupoId,
-          fisica: { multiturma, maximoIntegrantes, quantidadeGrupos, edicao: { dataLimite } },
+          fisica: {
+            multiturma,
+            minimoIntegrantes,
+            maximoIntegrantes,
+            quantidadeGrupos,
+            edicao: { dataLimite },
+          },
         }),
         findMany: vi.fn().mockResolvedValue(colegasNoBanco),
         updateMany: vi.fn().mockResolvedValue({ count: 1 }),
@@ -306,6 +315,13 @@ describe('criarGrupo', () => {
     ['prazo encerrado', { dataLimite: new Date(Date.now() - 1000) }, [], PrazoEncerrado],
     ['quem cria já tem grupo', { meuGrupoId: 9 }, [], JaEmGrupo],
     ['colegas além do máximo', { maximoIntegrantes: 2 }, [7, 8], GrupoCheio],
+    ['sozinho abaixo do mínimo', { minimoIntegrantes: 2 }, [], GrupoIncompleto],
+    [
+      'com colegas, ainda abaixo do mínimo',
+      { minimoIntegrantes: 3, colegasNoBanco: [colega('Ana')] },
+      [7],
+      GrupoIncompleto,
+    ],
     [
       'a Física já tem todos os grupos',
       { quantidadeGrupos: 2, numerosExistentes: [1, 2] },
