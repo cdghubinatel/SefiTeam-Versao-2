@@ -29,14 +29,14 @@ describe('app', () => {
   });
 
   it('as mensagens de validação da API saem em português', async () => {
-    const payload = { email: 'nao-e-email', senha: 'x' };
+    const payload = { login: '', senha: 'x' };
 
     const resposta = await app.inject({ method: 'POST', url: '/auth/login', payload });
 
     expect(resposta.statusCode).toBe(400);
     // Texto calculado pelo próprio Zod (ver src/test/zod.ts), sem depender da tradução exata.
     expect(erroDa(resposta).detalhes).toEqual([
-      { campo: 'email', mensagem: mensagemDoZod(loginBodySchema, payload, 'ptBR') },
+      { campo: 'login', mensagem: mensagemDoZod(loginBodySchema, payload, 'ptBR') },
     ]);
   });
 

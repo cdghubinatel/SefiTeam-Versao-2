@@ -7,7 +7,7 @@ import '../src/config/zod.js';
 import argon2 from 'argon2';
 import { z } from 'zod';
 import { criarPrismaClient } from '../src/lib/prisma.js';
-import { normalizarEmail, senhaDoAluno } from '../src/modules/auth/service.js';
+import { loginDoAluno, senhaDoAluno } from '../src/modules/auth/service.js';
 
 const SEMESTRE = 'DEMO';
 const TRINTA_DIAS = 30 * 24 * 60 * 60 * 1000;
@@ -31,13 +31,9 @@ const alunos = [
   'Karina Melo',
   'Lucas Martins',
 ].map((nome, indice) => {
+  const curso = indice % 2 === 0 ? 'GES' : 'GEC';
   const matricula = String(9001 + indice);
-  return {
-    nome,
-    curso: indice % 2 === 0 ? 'GES' : 'GEC',
-    matricula,
-    email: normalizarEmail(`demo${matricula}@sefiteam.local`),
-  };
+  return { nome, curso, matricula, login: loginDoAluno({ curso, matricula }) };
 });
 
 async function main() {
@@ -108,7 +104,7 @@ async function main() {
       for (const [indice, aluno] of alunos.entries()) {
         const dados = { ...aluno, senhaHash: hashes[indice]!, papel: 'ALUNO' as const };
         const { id } = await tx.usuario.upsert({
-          where: { email: aluno.email },
+          where: { login: aluno.login },
           create: dados,
           update: dados,
         });
@@ -147,7 +143,7 @@ async function main() {
     console.log(`Edição ${SEMESTRE} criada (ativa, prazo em 30 dias). Logins dos alunos:`);
     console.table(
       alunos.map((aluno, indice) => ({
-        email: aluno.email,
+        login: aluno.login,
         senha: senhaDoAluno(aluno),
         nome: aluno.nome,
         F01: indice < 6 ? 'A' : 'B',

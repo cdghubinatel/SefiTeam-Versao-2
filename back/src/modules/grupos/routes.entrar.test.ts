@@ -291,7 +291,7 @@ describe('POST /grupos/:grupoId/entrar', () => {
       alunoIds: [ana.id],
     });
     const admin = await criarUsuario(app.prisma, {
-      email: 'admin@teste.local',
+      login: 'ADMIN',
       senha: 'x',
       papel: 'ADMIN',
     });
