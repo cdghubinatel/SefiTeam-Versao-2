@@ -54,7 +54,7 @@ cd back
 cp .env.example .env
 npm install              # também gera o Prisma Client (postinstall)
 npm run db:migrate       # aplica as migrations no banco local
-npm run db:seed          # cria o admin (ADMIN_EMAIL / ADMIN_SENHA)
+npm run db:seed          # cria o admin (ADMIN_LOGIN / ADMIN_SENHA)
 npm run dev
 ```
 
@@ -74,7 +74,7 @@ Copie `.env.example` para `.env`. As variáveis são validadas ao iniciar (`src/
 | `JWT_SECRET`      | Segredo para assinar os tokens (mín. 32 caracteres; o de exemplo é recusado em produção)            |
 | `JWT_EXPIRES_IN`  | Validade do token (ex.: `8h`)                                                                       |
 | `CORS_ORIGIN`     | Origem do front-end liberada no CORS                                                                |
-| `ADMIN_EMAIL`     | E-mail (login) do admin criado pelo seed                                                            |
+| `ADMIN_LOGIN`     | Login do admin criado pelo seed (ex.: `admin`)                                                      |
 | `ADMIN_SENHA`     | Senha do admin criado pelo seed (mín. 16 caracteres)                                                |
 | `SWAGGER_ENABLED` | Expõe o Swagger em `/docs` (`false` em produção)                                                    |
 
@@ -101,7 +101,7 @@ Copie `.env.example` para `.env`. As variáveis são validadas ao iniciar (`src/
 - Configuração do Prisma em `prisma.config.ts` (o Prisma 7 não lê o `.env` sozinho; o arquivo carrega o `.env` quando ele existe).
 - O Prisma Client é gerado em `src/generated/prisma` (fora do Git) e conecta via driver adapter `@prisma/adapter-pg`.
 - O índice único parcial de `edicao` usa o preview `partialIndexes` direto no schema.
-- A migration `login_por_email` deixa o e-mail obrigatório e remove a coluna `login`. Num banco de desenvolvimento criado antes dela (admin sem e-mail), ela falha: troque `ADMIN_LOGIN` por `ADMIN_EMAIL` no `.env`, rode `npx prisma migrate reset` (apaga os dados locais) e depois `npm run db:seed`.
+- A migration `login_curso_matricula` remove o e-mail e cria `usuario.login`, preenchendo curso + matrícula nos alunos e `ADMIN` no admin. Depois dela, troque `ADMIN_EMAIL` por `ADMIN_LOGIN` no `.env` e rode `npm run db:seed` (grava o login do admin). Alunos já cadastrados mantêm a senha antiga (curso + matrícula) até serem cadastrados de novo (`npm run db:seed:demo` ou o upload da planilha): o hash argon2 não é recalculável em SQL.
 - A extensão `unaccent` (busca sem acentos) é criada à mão na migration `busca_sem_acento`; o schema do Prisma não a declara, e o `migrate diff` a ignora.
 - `CHECK(minimo_integrantes <= maximo_integrantes)` foi escrito à mão na migration inicial, porque o Prisma não suporta CHECK no schema. Ao gerar novas migrations, confira se o Prisma não tentou removê-lo.
 

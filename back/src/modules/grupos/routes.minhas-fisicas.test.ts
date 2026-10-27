@@ -141,7 +141,7 @@ describe('GET /fisicas/minhas', () => {
 
   it('responde 403 para admin e 401 sem token', async () => {
     const admin = await criarUsuario(app.prisma, {
-      email: 'admin@teste.local',
+      login: 'ADMIN',
       senha: 'x',
       papel: 'ADMIN',
     });

@@ -21,12 +21,12 @@ enum Papel {
 
 model Usuario {
   id           Int      @id @default(autoincrement())
-  /// Login de todos os usuários. Gravado normalizado (sem espaços nas pontas, em minúsculas).
-  email        String   @unique
+  /// Aluno: curso + matrícula (ex.: GES589); admin: ADMIN_LOGIN. Gravado sem espaços e em maiúsculas.
+  login        String   @unique
   senhaHash    String   @map("senha_hash")
   nome         String
   papel        Papel
-  /// Só aluno. A senha do aluno é curso + matrícula (ex.: GES589).
+  /// Só aluno. A senha do aluno é a primeira palavra do nome (ver docs/autenticacao.md).
   curso        String?
   matricula    String?
   /// Vai no token; incrementar invalida todos os tokens já emitidos (logout, nova senha).

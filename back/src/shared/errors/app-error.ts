@@ -28,7 +28,7 @@ export class DadosInvalidos extends AppError {
 
 export class CredenciaisInvalidas extends AppError {
   constructor() {
-    super(401, 'CREDENCIAIS_INVALIDAS', 'E-mail ou senha inválidos.');
+    super(401, 'CREDENCIAIS_INVALIDAS', 'Login ou senha inválidos.');
   }
 }
 

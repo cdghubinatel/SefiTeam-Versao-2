@@ -11,8 +11,8 @@ sequenceDiagram
     participant R as Rota
     participant DB as PostgreSQL
 
-    F->>R: POST /auth/login { email, senha }
-    R->>DB: busca usuário pelo e-mail
+    F->>R: POST /auth/login { login, senha }
+    R->>DB: busca usuário pelo login
     R-->>F: 200 { token, usuario } ou 401 CREDENCIAIS_INVALIDAS
     Note over F: guarda o token no localStorage
 
@@ -103,7 +103,7 @@ Todos os erros da API seguem o mesmo formato:
 
 | Status | `codigo`                | Quando                                                                                | Front-end                              |
 | ------ | ----------------------- | ------------------------------------------------------------------------------------- | -------------------------------------- |
-| 401    | `CREDENCIAIS_INVALIDAS` | E-mail ou senha errados                                                               | Mostra o erro na tela de login         |
+| 401    | `CREDENCIAIS_INVALIDAS` | Login ou senha errados                                                                | Mostra o erro na tela de login         |
 | 401    | `TOKEN_AUSENTE`         | Rota protegida sem header `Authorization`                                             | Apaga o token e redireciona a `/login` |
 | 401    | `TOKEN_INVALIDO`        | Token adulterado, expirado, revogado (logout) ou usuário inexistente                  | Apaga o token e redireciona a `/login` |
 | 403    | `SEM_PERMISSAO`         | Usuário autenticado sem o papel exigido pela rota                                     | Tela "sem acesso" (**não** desloga)    |
@@ -120,51 +120,49 @@ Todos os erros da API seguem o mesmo formato:
 | 409    | `TURMA_DIFERENTE`       | Sem multiturma, aluno de outra turma no grupo                                         | Mostra a mensagem                      |
 | 500    | `ERRO_INTERNO`          | Erro inesperado (detalhes só no log do servidor)                                      | Mensagem genérica de erro              |
 
-Em `VALIDACAO`, `detalhes` traz `[{ "campo": "email", "mensagem": "..." }]`. As mensagens de `detalhes` saem em **português** (tradução pt-BR do próprio Zod, configurada em `back/src/config/zod.ts` com `z.config(z.locales.ptBR())`), por exemplo "Formato do endereço de e-mail inválido". O front pode mostrá-las direto no campo; os códigos (`codigo`) não mudam.
+Em `VALIDACAO`, `detalhes` traz `[{ "campo": "login", "mensagem": "..." }]`. As mensagens de `detalhes` saem em **português** (tradução pt-BR do próprio Zod, configurada em `back/src/config/zod.ts` com `z.config(z.locales.ptBR())`), por exemplo "Pequeno demais: esperava que o texto tivesse >= 1 caracteres". O front pode mostrá-las direto no campo; os códigos (`codigo`) não mudam.
 
-A mensagem de `CREDENCIAIS_INVALIDAS` é sempre genérica ("E-mail ou senha inválidos."). Ela não revela se o e-mail está cadastrado.
+A mensagem de `CREDENCIAIS_INVALIDAS` é sempre genérica ("Login ou senha inválidos."). Ela não revela se o login está cadastrado.
 
 ## Rotas
 
 | Método | Rota           | Acesso      | Descrição                                                                                                       |
 | ------ | -------------- | ----------- | --------------------------------------------------------------------------------------------------------------- |
-| POST   | `/auth/login`  | Pública     | Recebe `{ email, senha }`, devolve `{ token, usuario }`                                                         |
+| POST   | `/auth/login`  | Pública     | Recebe `{ login, senha }`, devolve `{ token, usuario }`                                                         |
 | GET    | `/auth/me`     | Autenticado | Dados do usuário logado (o front usa ao recarregar a página)                                                    |
 | POST   | `/auth/logout` | Autenticado | Incrementa `token_versao`: derruba as sessões do usuário em todos os dispositivos. O front também apaga o token |
 
-`usuario` (também em `GET /auth/me`) é `{ id, email, nome, papel }`.
+`usuario` (também em `GET /auth/me`) é `{ id, login, nome, papel }`.
 
-`POST /auth/login` tem rate limit (`@fastify/rate-limit`): **10 tentativas por minuto por IP + e-mail** (normalizado). A chave inclui o e-mail porque os alunos do Inatel acessam pela mesma rede, ou seja, pelo mesmo IP. Um limite só por IP bloquearia a turma inteira por causa das tentativas de um aluno.
+`POST /auth/login` tem rate limit (`@fastify/rate-limit`): **10 tentativas por minuto por IP + login** (normalizado). A chave inclui o login porque os alunos do Inatel acessam pela mesma rede, ou seja, pelo mesmo IP. Um limite só por IP bloquearia a turma inteira por causa das tentativas de um aluno.
 
-Para o tempo de resposta não revelar se um e-mail está cadastrado, o e-mail inexistente também passa por uma verificação argon2, contra um hash falso.
+Para o tempo de resposta não revelar se um login está cadastrado, o login inexistente também passa por uma verificação argon2, contra um hash falso.
 
 ## Login e senha
 
-- O login de todos os usuários é o **e-mail** (`usuario.email`, único). Ele é normalizado (sem espaços nas pontas, em **minúsculas**) antes de gravar e antes de comparar: `Maria@Inatel.br` = `maria@inatel.br`.
-- O corpo do login é validado como e-mail (até 254 caracteres); fora do formato, `400 VALIDACAO`.
+- O login de todos os usuários fica em `usuario.login` (único). Ele é normalizado (**sem espaços** e em **maiúsculas**) antes de gravar e antes de comparar: `ges 589` = `GES589`.
+- O corpo do login é validado como texto de 1 a 100 caracteres (espaços nas pontas não contam); fora disso, `400 VALIDACAO`.
 - As senhas são guardadas com hash **argon2** (`argon2id`), nunca em texto.
-- **Não existe troca nem recuperação de senha** nesta versão, e o sistema não envia e-mails.
+- **Não existe troca nem recuperação de senha** nesta versão, e o sistema não envia e-mails (a planilha não traz e-mail).
 
 ### Aluno
 
-- Login: o e-mail, que vem de uma **coluna da planilha** de upload.
-- Senha: **curso + matrícula** (ex.: `GES589`), gerada por `senhaDoAluno({ curso, matricula })` (`back/src/modules/auth/service.ts`) quando o aluno é cadastrado no upload.
-- A senha do aluno **não diferencia maiúsculas**: `ges589` = `GES589`. O hash é gravado em maiúsculas e, no login de um aluno, o que foi digitado é convertido antes de comparar. Isso evita erros por caps lock no celular.
-- Como o aluno é reaproveitado entre edições, a senha continua a mesma de um semestre para o outro.
+- Login: **curso + matrícula** (ex.: `GES589`), as colunas Curso e Matricula da planilha. Gerado por `loginDoAluno({ curso, matricula })` (`back/src/modules/auth/service.ts`). Como `(curso, matricula)` é único, o login também é.
+- Senha: a **primeira palavra do nome** (coluna Aluno), separada por espaço: "Maria Clara Souza" → `maria`. Gerada por `senhaDoAluno({ nome })` quando o aluno é cadastrado.
+- A senha do aluno **não diferencia maiúsculas nem acentos**: `joao` = `João` = `JOAO`. O hash é gravado sem acentos e em maiúsculas e, no login de um aluno, o que foi digitado é convertido do mesmo jeito antes de comparar. Isso evita erros de teclado no celular. Digitar o nome completo não funciona: a senha é só a primeira palavra.
+- Como o aluno é reaproveitado entre edições, o login continua o mesmo de um semestre para o outro. Se o nome mudar na planilha de uma edição nova, a senha muda junto.
 
-#### Risco aceito
+#### Sem segurança de propósito
 
-A senha do aluno **não é secreta**: curso e matrícula são conhecidos pelos colegas, e o e-mail institucional costuma ser fácil de deduzir. Quem souber esses dados de um colega consegue entrar como ele, criar ou sair de grupos em seu nome, e o sistema registra como se tivesse sido o colega. O rate limit do login também não protege contra isso, porque não há o que adivinhar.
+O login e a senha do aluno **não são secretos**: curso, matrícula e nome são de livre acesso na instituição, e as telas de grupo mostram o nome, o curso e a matrícula dos colegas (como no Figma, ver [grupos.md](grupos.md)). Qualquer pessoa consegue entrar como qualquer aluno e criar ou entrar em grupos em seu nome, e o sistema registra como se tivesse sido ele. O rate limit do login também não protege contra isso, porque não há o que adivinhar.
 
-O próprio sistema amplia esse risco: nas telas de grupo, **o aluno vê o curso e a matrícula dos colegas** da mesma Física (como no Figma, ver [grupos.md](grupos.md)). Ou seja, qualquer aluno logado tem a senha dos colegas, e só precisa deduzir o e-mail deles. Também foi uma decisão consciente.
-
-Foi uma decisão consciente para esta primeira versão (simplicidade, sem depender de um servidor de e-mail). Para fechar o risco, a evolução prevista é voltar a gerar uma **senha aleatória** e enviá-la por e-mail usando o **SMTP do Inatel**, se o coordenador aprovar ([roadmap](roadmap.md#futuro)).
+Decisão do grupo: a API é interna, só ajuda os alunos a montarem os grupos e não guarda nenhuma informação sigilosa. O login existe para identificar quem está usando, não para proteger dados. O que continua protegido é o **admin** (senha forte, abaixo), porque ele altera grupos de todos e configura a edição.
 
 ### Admin
 
-- Existe **um único** admin, criado pelo seed do Prisma a partir de `ADMIN_EMAIL` e `ADMIN_SENHA` (`.env`).
+- Existe **um único** admin, criado pelo seed do Prisma a partir de `ADMIN_LOGIN` (ex.: `admin`, gravado como `ADMIN`) e `ADMIN_SENHA` (`.env`). Rodar o seed de novo atualiza o login e a senha desse admin.
 - A senha do admin **diferencia maiúsculas** (não passa pela normalização da senha do aluno).
-- `ADMIN_SENHA` precisa ter **pelo menos 16 caracteres** (o seed recusa senhas menores). O admin é o alvo mais valioso: a senha dele é escolhida por uma pessoa, e o rate limit do login é por IP + e-mail, então não impede tentativas vindas de muitos IPs.
+- `ADMIN_SENHA` precisa ter **pelo menos 16 caracteres** (o seed recusa senhas menores). O admin é o alvo mais valioso: a senha dele é escolhida por uma pessoa, e o rate limit do login é por IP + login, então não impede tentativas vindas de muitos IPs.
 - O seed é idempotente: rodar de novo não duplica o admin.
 - **O admin não troca a senha pelo sistema** (decisão desta primeira versão). A única forma é mudar `ADMIN_SENHA` no `.env` e rodar `npm run db:seed` de novo, o que atualiza o hash.
 - Limitação conhecida: o seed **não** incrementa `token_versao`, então tokens do admin emitidos antes da troca continuam válidos até expirar (`JWT_EXPIRES_IN`). Se a troca de senha do admin entrar no sistema, ela deve incrementar `token_versao`.
@@ -181,6 +179,6 @@ Foi uma decisão consciente para esta primeira versão (simplicidade, sem depend
 | ----------------- | ---------------------------------------------- |
 | `JWT_SECRET`      | Segredo de assinatura do token (mín. 32 chars) |
 | `JWT_EXPIRES_IN`  | Validade do token (ex.: `8h`)                  |
-| `ADMIN_EMAIL`     | E-mail (login) do admin criado pelo seed       |
+| `ADMIN_LOGIN`     | Login do admin criado pelo seed (ex.: `admin`) |
 | `ADMIN_SENHA`     | Senha do admin criado pelo seed (mín. 16)      |
 | `SWAGGER_ENABLED` | Expõe `/docs` (`true` em dev, `false` em prod) |

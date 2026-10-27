@@ -1,21 +1,45 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import argon2 from 'argon2';
 import { CredenciaisInvalidas } from '../../shared/errors/app-error.js';
-import { autenticar, encerrarSessoes, normalizarEmail, senhaDoAluno } from './service.js';
+import {
+  autenticar,
+  encerrarSessoes,
+  loginDoAluno,
+  normalizarLogin,
+  senhaDoAluno,
+} from './service.js';
 
-describe('normalizarEmail', () => {
-  it('remove espaços das pontas e converte para minúsculas', () => {
-    expect(normalizarEmail('  Maria.Silva@Inatel.BR ')).toBe('maria.silva@inatel.br');
+describe('normalizarLogin', () => {
+  it('remove todos os espaços e converte para maiúsculas', () => {
+    expect(normalizarLogin('  ges 589 ')).toBe('GES589');
+  });
+});
+
+describe('loginDoAluno', () => {
+  it('junta curso e matrícula em maiúsculas', () => {
+    expect(loginDoAluno({ curso: 'GES', matricula: '589' })).toBe('GES589');
+  });
+
+  it('normaliza espaços e minúsculas vindos da planilha', () => {
+    expect(loginDoAluno({ curso: ' ges ', matricula: ' 589 ' })).toBe('GES589');
+  });
+
+  it('mantém zeros à esquerda da matrícula', () => {
+    expect(loginDoAluno({ curso: 'GEC', matricula: '0042' })).toBe('GEC0042');
   });
 });
 
 describe('senhaDoAluno', () => {
-  it('junta curso e matrícula em maiúsculas', () => {
-    expect(senhaDoAluno({ curso: 'GES', matricula: '589' })).toBe('GES589');
-  });
-
-  it('normaliza espaços e minúsculas vindos da planilha', () => {
-    expect(senhaDoAluno({ curso: ' ges ', matricula: ' 589 ' })).toBe('GES589');
+  it.each([
+    ['Maria', 'MARIA'],
+    ['Maria Clara Souza', 'MARIA'],
+    ['  joão   pereira ', 'JOAO'],
+    ['ÁLVARO', 'ALVARO'],
+    ['Conceição Dias', 'CONCEICAO'],
+    ["D'Ávila Ramos", "D'AVILA"],
+    ['Ana-Luísa Prado', 'ANA-LUISA'],
+  ])('usa só a primeira palavra do nome, sem acentos e em maiúsculas (%j)', (nome, senha) => {
+    expect(senhaDoAluno({ nome })).toBe(senha);
   });
 });
 
@@ -25,7 +49,7 @@ describe('autenticar', () => {
 
   beforeAll(async () => {
     [hashDoAluno, hashDoAdmin] = await Promise.all([
-      argon2.hash('GES589'),
+      argon2.hash(senhaDoAluno({ nome: 'João Pereira' })),
       argon2.hash('Senha-Do-Admin-123'),
     ]);
   });
@@ -37,8 +61,8 @@ describe('autenticar', () => {
 
   const aluno = () => ({
     id: 7,
-    email: 'maria@inatel.br',
-    nome: 'Maria',
+    login: 'GES589',
+    nome: 'João Pereira',
     papel: 'ALUNO',
     senhaHash: hashDoAluno,
     tokenVersao: 3,
@@ -46,7 +70,7 @@ describe('autenticar', () => {
 
   const admin = () => ({
     id: 1,
-    email: 'admin@inatel.br',
+    login: 'ADMIN',
     nome: 'Administrador',
     papel: 'ADMIN',
     senhaHash: hashDoAdmin,
@@ -56,46 +80,52 @@ describe('autenticar', () => {
   it('devolve o usuário e a versão do token quando a senha confere', async () => {
     const { prisma } = prismaCom(aluno());
 
-    await expect(
-      autenticar({ prisma }, { email: 'maria@inatel.br', senha: 'GES589' }),
-    ).resolves.toEqual({
-      usuario: { id: 7, email: 'maria@inatel.br', nome: 'Maria', papel: 'ALUNO' },
+    await expect(autenticar({ prisma }, { login: 'GES589', senha: 'João' })).resolves.toEqual({
+      usuario: { id: 7, login: 'GES589', nome: 'João Pereira', papel: 'ALUNO' },
       tokenVersao: 3,
     });
   });
 
-  it('busca pelo e-mail normalizado', async () => {
+  it('busca pelo login normalizado', async () => {
     const { prisma, findUnique } = prismaCom(aluno());
 
-    await autenticar({ prisma }, { email: ' Maria@Inatel.br ', senha: 'GES589' });
+    await autenticar({ prisma }, { login: ' ges 589 ', senha: 'João' });
 
-    expect(findUnique).toHaveBeenCalledWith({ where: { email: 'maria@inatel.br' } });
+    expect(findUnique).toHaveBeenCalledWith({ where: { login: 'GES589' } });
   });
 
   it('não devolve o hash da senha', async () => {
     const { prisma } = prismaCom(aluno());
 
-    const { usuario } = await autenticar({ prisma }, { email: 'maria@inatel.br', senha: 'GES589' });
+    const { usuario } = await autenticar({ prisma }, { login: 'GES589', senha: 'João' });
 
     expect(usuario).not.toHaveProperty('senhaHash');
   });
 
-  it.each(['ges589', 'Ges589', ' GES589 '])(
-    'aceita a senha do aluno sem diferenciar maiúsculas (%j)',
+  it.each(['joao', 'JOAO', 'João', ' joão '])(
+    'aceita a senha do aluno sem diferenciar maiúsculas nem acentos (%j)',
     async (senha) => {
       const { prisma } = prismaCom(aluno());
 
-      await expect(autenticar({ prisma }, { email: 'maria@inatel.br', senha })).resolves.toEqual(
+      await expect(autenticar({ prisma }, { login: 'GES589', senha })).resolves.toEqual(
         expect.objectContaining({ tokenVersao: 3 }),
       );
     },
   );
 
+  it('recusa o nome completo como senha do aluno', async () => {
+    const { prisma } = prismaCom(aluno());
+
+    await expect(
+      autenticar({ prisma }, { login: 'GES589', senha: 'João Pereira' }),
+    ).rejects.toBeInstanceOf(CredenciaisInvalidas);
+  });
+
   it('aceita a senha exata do admin', async () => {
     const { prisma } = prismaCom(admin());
 
     await expect(
-      autenticar({ prisma }, { email: 'admin@inatel.br', senha: 'Senha-Do-Admin-123' }),
+      autenticar({ prisma }, { login: 'admin', senha: 'Senha-Do-Admin-123' }),
     ).resolves.toEqual(expect.objectContaining({ tokenVersao: 0 }));
   });
 
@@ -103,7 +133,7 @@ describe('autenticar', () => {
     const { prisma } = prismaCom(admin());
 
     await expect(
-      autenticar({ prisma }, { email: 'admin@inatel.br', senha: 'senha-do-admin-123' }),
+      autenticar({ prisma }, { login: 'admin', senha: 'senha-do-admin-123' }),
     ).rejects.toBeInstanceOf(CredenciaisInvalidas);
   });
 
@@ -111,15 +141,15 @@ describe('autenticar', () => {
     const { prisma } = prismaCom(aluno());
 
     await expect(
-      autenticar({ prisma }, { email: 'maria@inatel.br', senha: 'GES590' }),
+      autenticar({ prisma }, { login: 'GES589', senha: 'Pereira' }),
     ).rejects.toBeInstanceOf(CredenciaisInvalidas);
   });
 
-  it('rejeita e-mail inexistente com o mesmo erro da senha errada', async () => {
+  it('rejeita login inexistente com o mesmo erro da senha errada', async () => {
     const { prisma } = prismaCom(null);
 
     await expect(
-      autenticar({ prisma }, { email: 'ninguem@inatel.br', senha: 'qualquer' }),
+      autenticar({ prisma }, { login: 'GES999', senha: 'qualquer' }),
     ).rejects.toBeInstanceOf(CredenciaisInvalidas);
   });
 });

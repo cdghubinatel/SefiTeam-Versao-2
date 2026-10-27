@@ -4,7 +4,11 @@ O que a API já faz (ou vai fazer), mas ainda não está desenhado no [Figma](ht
 
 ## Login
 
-- [ ] **Tela de login**: o campo passa a ser **e-mail** (não mais curso + matrícula). Ver [autenticacao.md](autenticacao.md).
+- [ ] **Tela de login**: os campos são **Login** (curso + matrícula, ex.: `GES589`) e **Senha** (o primeiro nome, ex.: `maria`), sem diferenciar maiúsculas nem acentos. Vale um texto de ajuda com esse formato, já que o aluno não recebe a senha. Ver [autenticacao.md](autenticacao.md).
+
+## Físicas
+
+- [ ] **Código da Física**: é o nome da aba da planilha, como está (`Fis1`, `Fis2`...), não `F01`. As telas que mostram "F01-A" passam a mostrar "Fis1-A" (código da Física + turma).
 
 ## Dúvidas frequentes
 

@@ -17,7 +17,7 @@ erDiagram
 
     usuario {
         int id PK
-        string email UK "login"
+        string login UK "curso + matrícula"
         string senha_hash
         string nome
         enum papel "ADMIN | ALUNO"
@@ -80,8 +80,8 @@ erDiagram
 
 Admins e alunos numa única tabela, diferenciados por `papel`.
 
-- `email` é o **login**: obrigatório e único para todos. Gravado normalizado (sem espaços nas pontas, em minúsculas), então `Maria@Inatel.br` e `maria@inatel.br` são o mesmo usuário. Para alunos, vem da planilha de upload.
-- `senha_hash`: hash argon2, nunca a senha em texto. A senha do aluno é `curso + matrícula` (ex.: `GES589`); a do admin vem do `.env` (ver [autenticacao.md](autenticacao.md)).
+- `login`: obrigatório e único para todos. Do aluno, **curso + matrícula** (ex.: `GES589`); do admin, `ADMIN_LOGIN` do `.env`. Gravado normalizado (sem espaços, em maiúsculas), então `ges 589` e `GES589` são o mesmo usuário. Não existe e-mail: a planilha não o traz.
+- `senha_hash`: hash argon2, nunca a senha em texto. A senha do aluno é a primeira palavra do nome (ex.: `MARIA`); a do admin vem do `.env` (ver [autenticacao.md](autenticacao.md)).
 - `token_versao`: vai dentro do token. Incrementar invalida todos os tokens já emitidos (logout, nova senha).
 - `UNIQUE(curso, matricula)`: o aluno é uma pessoa única, reaproveitada entre edições.
 
@@ -93,7 +93,7 @@ Admins e alunos numa única tabela, diferenciados por `papel`.
 
 ### `fisica`
 
-Criada por edição, a partir das abas da planilha.
+Criada por edição, a partir das abas da planilha. `codigo` é o nome da aba, como está (ex.: `Fis1`).
 
 - `UNIQUE(edicao_id, codigo)`.
 - `CHECK(minimo_integrantes <= maximo_integrantes)`.

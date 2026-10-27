@@ -8,7 +8,7 @@ import { SWAGGER_PREFIXO } from './swagger.js';
 
 export type UsuarioAutenticado = {
   id: number;
-  email: string;
+  login: string;
   nome: string;
   papel: Papel;
 };
@@ -77,7 +77,7 @@ export default fp(
       // (logout / nova senha incrementam token_versao) e usa o papel atual.
       const usuario = await app.prisma.usuario.findUnique({
         where: { id: Number(payload.sub) },
-        select: { id: true, email: true, nome: true, papel: true, tokenVersao: true },
+        select: { id: true, login: true, nome: true, papel: true, tokenVersao: true },
       });
       if (!usuario || usuario.tokenVersao !== payload.versao) {
         throw new TokenInvalido();
@@ -89,7 +89,7 @@ export default fp(
 
       request.usuario = {
         id: usuario.id,
-        email: usuario.email,
+        login: usuario.login,
         nome: usuario.nome,
         papel: usuario.papel,
       };

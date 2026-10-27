@@ -17,7 +17,7 @@ Código em `back/src/modules/grupos/`. Tabelas `grupo` e `inscricao` ([modelo-ba
 - **Multiturma desligado**: o grupo só aceita alunos da turma dos integrantes atuais.
 - **Quantidade de grupos**: o total por Física, mesmo com o multiturma desligado. Risco: uma turma pode ocupar todos os grupos e deixar a outra sem nenhum. Cabe ao professor configurar uma quantidade que comporte todas as turmas.
 - **Numeração**: um grupo novo recebe o menor número livre na Física (com os grupos 1, 3 e 4, o próximo é o 2).
-- Curso e matrícula dos colegas aparecem para o aluno (como no Figma). Isso amplia o risco descrito em [autenticacao.md](autenticacao.md#risco-aceito).
+- Curso e matrícula dos colegas aparecem para o aluno (como no Figma). Com isso, ele sabe o login dos colegas; foi aceito, porque o login não tem segurança de propósito ([autenticacao.md](autenticacao.md#sem-segurança-de-propósito)).
 
 ## Rotas
 

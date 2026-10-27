@@ -341,7 +341,7 @@ describe('POST /fisicas/:fisicaId/grupos', () => {
   it('responde 400 sem corpo e 403 para admin', async () => {
     const { f01, eu } = await cenario();
     const admin = await criarUsuario(app.prisma, {
-      email: 'admin@teste.local',
+      login: 'ADMIN',
       senha: 'x',
       papel: 'ADMIN',
     });

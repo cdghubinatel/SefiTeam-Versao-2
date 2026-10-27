@@ -43,7 +43,7 @@ npm run dev              # API em http://127.0.0.1:3333, Swagger em /docs
 npm test                 # Vitest (integração usa o banco sefiteam_test)
 npm run typecheck && npm run lint && npm run format:check
 npm run db:migrate       # nova migration / aplicar no banco local
-npm run db:seed          # admin a partir de ADMIN_EMAIL / ADMIN_SENHA
+npm run db:seed          # admin a partir de ADMIN_LOGIN / ADMIN_SENHA
 npm run db:seed:demo     # edição ativa DEMO com Físicas, alunos e grupo (teste manual de grupos)
 ```
 
@@ -56,7 +56,8 @@ Convenções:
 - Mensagens de validação do Zod em **pt-BR**: `z.config(z.locales.ptBR())` em `src/config/zod.ts`, primeiro import de `config/env.ts` e dos seeds. Nos testes, calcular a mensagem esperada com `mensagemDoZod` (`src/test/zod.ts`), nunca comparar o texto fixo da tradução.
 - Schemas de resposta com Zod em todas as rotas (eles geram o Swagger); erros documentados com `erroSchema`.
 - Testes `*.test.ts` ao lado do código, importando de `'vitest'`. Unitários mockam o Prisma; os de integração usam `buildApp()` + `app.inject()` e `src/test/db.ts` (`limparBanco`, `criarUsuario`). Módulo com muitas rotas: um arquivo de integração por rota, `routes.<rota>.test.ts`, com o que é comum em `src/test/` (ex.: `requisicaoComo` em `http.ts`, `criarCenarioDeGrupos` em `db.ts`).
-- Login é o **e-mail** (`usuario.email`, único), sempre gravado com `normalizarEmail` (minúsculas). A senha do aluno é `senhaDoAluno({ curso, matricula })` (ex.: `GES589`) e é comparada sem diferenciar maiúsculas; a do admin, exata. Tudo em `src/modules/auth/service.ts`.
+- Não existe e-mail. O login é `usuario.login` (único), sempre gravado com `normalizarLogin` (sem espaços, maiúsculas): do aluno, `loginDoAluno({ curso, matricula })` (ex.: `GES589`); do admin, `ADMIN_LOGIN`. A senha do aluno é `senhaDoAluno({ nome })` (primeira palavra do nome, ex.: `MARIA`), comparada sem diferenciar maiúsculas nem acentos; a do admin, exata. Tudo em `src/modules/auth/service.ts`. O login do aluno não tem segurança de propósito (decisão do grupo, ver `docs/autenticacao.md`).
+- Planilha da edição: uma aba por Física (nome da aba = `fisica.codigo`, ex.: `Fis1`), colunas Curso (sigla), Matricula, Aluno e Turma.
 - Testes que precisam de edição/Física/turma/inscrição/grupo: helpers `criarEdicao`, `criarFisica`, `criarAluno`, `inscrever`, `criarGrupo` em `src/test/db.ts`.
 - Busca de alunos por texto: ignora acentos com `unaccent` via `$queryRaw` (ver `alunosDaBusca` em `modules/grupos/service.ts`). Em qualquer `LIKE`/`contains`, passar o texto por `escaparLike` (`src/lib/prisma.ts`), senão `%` e `_` viram curingas.
 - Regras que dependem de contagem ou de prazo (máximo de integrantes, quantidade de grupos, prazo, multiturma) ficam no service, **dentro de transação**, que começa com `travarFisica(tx, fisicaId)` (`SELECT ... FOR UPDATE` na Física; ver `docs/grupos.md#concorrência`). Toda ação nova que altera grupos precisa disso, e de um teste de concorrência com `Promise.all`.

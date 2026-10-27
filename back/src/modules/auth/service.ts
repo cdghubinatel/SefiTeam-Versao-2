@@ -9,38 +9,43 @@ type Deps = { prisma: Pick<PrismaClient, 'usuario'> };
 let hashFalso: Promise<string> | undefined;
 
 /**
- * Hash comparado quando o e-mail não existe, para o tempo de resposta
- * não revelar quais e-mails estão cadastrados.
+ * Hash comparado quando o login não existe, para o tempo de resposta
+ * não revelar quais logins estão cadastrados.
  */
 function obterHashFalso() {
   hashFalso ??= argon2.hash('login-inexistente');
   return hashFalso;
 }
 
-/** O e-mail é o login: gravado e comparado sem espaços nas pontas e em minúsculas. */
-export function normalizarEmail(email: string) {
-  return email.trim().toLowerCase();
+/** O login é gravado e comparado sem espaços e em maiúsculas: `ges 589` = `GES589`. */
+export function normalizarLogin(login: string) {
+  return login.replace(/\s/g, '').toUpperCase();
 }
 
-/** A senha do aluno não diferencia maiúsculas: `ges589` = `GES589`. */
+/** Login do aluno: curso + matrícula (ex.: `GES589`). Usado ao cadastrar o aluno. */
+export function loginDoAluno({ curso, matricula }: { curso: string; matricula: string }) {
+  return normalizarLogin(`${curso}${matricula}`);
+}
+
+/** A senha do aluno não diferencia maiúsculas nem acentos: `joao` = `João` = `JOAO`. */
 function normalizarSenhaDoAluno(senha: string) {
-  return senha.trim().toUpperCase();
+  return senha.trim().normalize('NFD').replace(/\p{M}/gu, '').toUpperCase();
 }
 
 /**
- * Senha do aluno: curso + matrícula (ex.: `GES589`). Usada ao cadastrar o aluno.
- * Risco aceito: quem souber o e-mail, o curso e a matrícula de um colega entra como ele
- * (ver docs/autenticacao.md).
+ * Senha do aluno: a primeira palavra do nome, separada por espaço ("Maria Clara Souza" → `MARIA`).
+ * Usada ao cadastrar o aluno. Não é secreta, de propósito (ver docs/autenticacao.md).
  */
-export function senhaDoAluno({ curso, matricula }: { curso: string; matricula: string }) {
-  return normalizarSenhaDoAluno(`${curso.trim()}${matricula.trim()}`);
+export function senhaDoAluno({ nome }: { nome: string }) {
+  const [primeiraPalavra = ''] = nome.trim().split(/\s+/);
+  return normalizarSenhaDoAluno(primeiraPalavra);
 }
 
 export async function autenticar(
   { prisma }: Deps,
-  { email, senha }: LoginBody,
+  { login, senha }: LoginBody,
 ): Promise<{ usuario: UsuarioAutenticado; tokenVersao: number }> {
-  const usuario = await prisma.usuario.findUnique({ where: { email: normalizarEmail(email) } });
+  const usuario = await prisma.usuario.findUnique({ where: { login: normalizarLogin(login) } });
 
   // Só a senha do aluno é normalizada; a do admin diferencia maiúsculas.
   const senhaDigitada = usuario?.papel === 'ALUNO' ? normalizarSenhaDoAluno(senha) : senha;
@@ -53,7 +58,7 @@ export async function autenticar(
   }
 
   return {
-    usuario: { id: usuario.id, email: usuario.email, nome: usuario.nome, papel: usuario.papel },
+    usuario: { id: usuario.id, login: usuario.login, nome: usuario.nome, papel: usuario.papel },
     tokenVersao: usuario.tokenVersao,
   };
 }

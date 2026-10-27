@@ -1,5 +1,6 @@
 import argon2 from 'argon2';
 import type { Papel, PrismaClient } from '../generated/prisma/client.js';
+import { loginDoAluno, senhaDoAluno } from '../modules/auth/service.js';
 
 /** Apaga todos os dados do banco de teste (mantém a estrutura). */
 export async function limparBanco(prisma: PrismaClient) {
@@ -9,8 +10,8 @@ export async function limparBanco(prisma: PrismaClient) {
 }
 
 type NovoUsuario = {
-  /** Já normalizado (minúsculas), como o cadastro grava. */
-  email: string;
+  /** Já normalizado (sem espaços, maiúsculas), como o cadastro grava (para aluno, `loginDoAluno`). */
+  login: string;
   /** Gravada como hash, do jeito que veio (para aluno, use `senhaDoAluno`). */
   senha: string;
   papel?: Papel;
@@ -22,9 +23,9 @@ type NovoUsuario = {
 export async function criarUsuario(prisma: PrismaClient, dados: NovoUsuario) {
   return prisma.usuario.create({
     data: {
-      email: dados.email,
+      login: dados.login,
       senhaHash: await argon2.hash(dados.senha),
-      nome: dados.nome ?? dados.email,
+      nome: dados.nome ?? dados.login,
       papel: dados.papel ?? 'ALUNO',
       curso: dados.curso ?? null,
       matricula: dados.matricula ?? null,
@@ -82,12 +83,12 @@ export async function criarFisica(prisma: PrismaClient, edicaoId: number, dados:
   return { ...fisica, turmas };
 }
 
-/** Aluno com curso GES; e-mail e nome derivados da matrícula, salvo se indicado. */
-export function criarAluno(prisma: PrismaClient, matricula: string, nome?: string) {
+/** Aluno com curso GES, login e senha como o cadastro grava; nome derivado da matrícula, salvo se indicado. */
+export function criarAluno(prisma: PrismaClient, matricula: string, nome = `Aluno ${matricula}`) {
   return criarUsuario(prisma, {
-    email: `aluno${matricula}@teste.local`,
-    senha: `GES${matricula}`,
-    nome: nome ?? `Aluno ${matricula}`,
+    login: loginDoAluno({ curso: 'GES', matricula }),
+    senha: senhaDoAluno({ nome }),
+    nome,
     curso: 'GES',
     matricula,
   });

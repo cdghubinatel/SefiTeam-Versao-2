@@ -31,7 +31,7 @@ describe('rotas /duvidas', () => {
 
   async function tokenDe(papel: Papel) {
     const usuario = await criarUsuario(app.prisma, {
-      email: `${papel.toLowerCase()}@teste.local`,
+      login: papel,
       senha: 'x',
       papel,
     });
