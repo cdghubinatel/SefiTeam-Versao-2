@@ -9,7 +9,7 @@ O professor (admin) cria uma **edição** da feira e faz upload de uma planilha 
 ## Regras de negócio
 
 - Apenas **uma edição ativa** por vez; as anteriores ficam como histórico.
-- Uma edição tem várias **Físicas** (F01, F02, F03...), definidas pela planilha (uma aba por Física).
+- Uma edição tem várias **Físicas**, definidas pela planilha: uma aba por Física (`Fis1`, `Fis2`...), com as colunas Curso, Matricula, Aluno e Turma.
 - Cada Física tem sua configuração: quantidade de grupos, mínimo e máximo de integrantes e **multiturma**.
 - O **prazo** para formar grupos é único por edição e vale para todas as Físicas.
 - Um aluno pode estar em várias Físicas, mas em **uma única turma** por Física.
@@ -19,7 +19,7 @@ O professor (admin) cria uma **edição** da feira e faz upload de uma planilha 
 - Quem cria um grupo inclui colegas sem grupo naquela Física, e o grupo **já nasce formado**: precisa ter pelo menos o mínimo de integrantes. Depois, qualquer integrante pode adicionar colegas (até o máximo). O aluno **não sai** do grupo: só o admin remove integrantes.
 - Após o prazo, o aluno não altera mais o grupo; o admin pode adicionar/remover alunos e apagar grupos.
 - **Dúvidas Frequentes** são globais e editadas pelo admin.
-- Login do aluno: o **e-mail** (vem da planilha). Senha: **curso + matrícula** (ex.: `GES589`), sem diferenciar maiúsculas. O aluno não troca a senha. Nesta versão o sistema não envia e-mails. Detalhes e riscos em [docs/autenticacao.md](docs/autenticacao.md).
+- Login do aluno: **curso + matrícula** (ex.: `GES589`). Senha: a **primeira palavra do nome** (ex.: `maria`), sem diferenciar maiúsculas nem acentos. O aluno não troca a senha, e o sistema não envia e-mails. Não há segurança de propósito (os dados são de livre acesso na instituição): detalhes em [docs/autenticacao.md](docs/autenticacao.md).
 
 ## Stack
 
