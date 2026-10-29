@@ -9,7 +9,9 @@ import {
   fisicaParamsSchema,
   grupoParamsSchema,
   grupoSchema,
+  integranteParamsSchema,
   minhasFisicasSchema,
+  remocaoDeIntegranteSchema,
 } from './schemas.js';
 import {
   adicionarIntegrantesComoAdmin,
@@ -19,9 +21,11 @@ import {
   listarColegasDisponiveis,
   listarGruposParaEntrar,
   listarMinhasFisicas,
+  removerIntegrante,
 } from './service.js';
 
 const somenteAluno = { papeis: ['ALUNO' as const] };
+const somenteAdmin = { papeis: ['ADMIN' as const] };
 const alunoOuAdmin = { papeis: ['ALUNO' as const, 'ADMIN' as const] };
 
 /** Registrado sem prefixo: as rotas ficam em `/fisicas/...` e `/grupos/...`. */
@@ -177,5 +181,27 @@ export const gruposRoutes: FastifyPluginAsyncZod = async (app) => {
         ? adicionarIntegrantesComoAdmin(deps, params.grupoId, body)
         : adicionarIntegrantesComoAluno(deps, usuario.id, params.grupoId, body);
     },
+  );
+
+  app.delete(
+    '/grupos/:grupoId/integrantes/:alunoId',
+    {
+      config: somenteAdmin,
+      schema: {
+        tags: ['grupos'],
+        summary: 'Remove um integrante do grupo',
+        description:
+          'Só admin, em qualquer edição e sem prazo. O aluno fica sem grupo nesta Física. O grupo pode ficar abaixo do mínimo (`formado: false`). Se era o último integrante, o grupo é apagado e a resposta traz `grupo: null`; os outros grupos não são renumerados. `404` se o grupo não existe ou se o aluno não é integrante dele.',
+        params: integranteParamsSchema,
+        response: {
+          200: remocaoDeIntegranteSchema,
+          400: erroSchema,
+          401: erroSchema,
+          403: erroSchema,
+          404: erroSchema,
+        },
+      },
+    },
+    async (request) => removerIntegrante(deps, request.params.grupoId, request.params.alunoId),
   );
 };

@@ -6,6 +6,8 @@ export const fisicaParamsSchema = z.object({ fisicaId: id });
 
 export const grupoParamsSchema = z.object({ grupoId: id });
 
+export const integranteParamsSchema = z.object({ grupoId: id, alunoId: id });
+
 export const colegasQuerySchema = z.object({
   /** Parte do nome ou da matrícula, sem diferenciar maiúsculas nem acentos. Vazio = todos. */
   busca: z.string().trim().max(100).optional(),
@@ -53,6 +55,11 @@ export const grupoSchema = z.object({
   integrantes: z.array(alunoResumoSchema),
 });
 
+export const remocaoDeIntegranteSchema = z.object({
+  /** Grupo depois da remoção; `null` quando era o último integrante e o grupo foi apagado. */
+  grupo: grupoSchema.nullable(),
+});
+
 export const minhasFisicasSchema = z.object({
   /** Edição ativa; `null` quando não há nenhuma. */
   edicao: z.object({ semestre: z.string(), dataLimite: z.iso.datetime() }).nullable(),
@@ -75,5 +82,6 @@ export const minhasFisicasSchema = z.object({
 export type CriarGrupoBody = z.infer<typeof criarGrupoBodySchema>;
 export type AdicionarIntegrantesBody = z.infer<typeof adicionarIntegrantesBodySchema>;
 export type Grupo = z.infer<typeof grupoSchema>;
+export type RemocaoDeIntegrante = z.infer<typeof remocaoDeIntegranteSchema>;
 export type AlunoResumo = z.infer<typeof alunoResumoSchema>;
 export type MinhasFisicas = z.infer<typeof minhasFisicasSchema>;

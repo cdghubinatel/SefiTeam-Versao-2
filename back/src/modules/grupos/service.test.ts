@@ -16,6 +16,7 @@ import {
   listarColegasDisponiveis,
   listarGruposParaEntrar,
   listarMinhasFisicas,
+  removerIntegrante,
 } from './service.js';
 
 type InscricaoMock = {
@@ -723,5 +724,106 @@ describe('adicionarIntegrantes', () => {
 
       expect(tx.inscricao.updateMany).toHaveBeenCalled();
     });
+  });
+});
+
+describe('removerIntegrante', () => {
+  type Opcoes = {
+    existeAntes?: boolean;
+    existeDepoisDoLock?: boolean;
+    /** Turmas dos integrantes; os ids de aluno são 100, 101, ... (ver `grupoDoBanco`). */
+    turmasDosIntegrantes?: readonly number[];
+  };
+
+  /** Prisma com a leitura fora da transação e um `tx` mockado dentro dela; o grupo é o 20. */
+  function prismaDoGrupo({
+    existeAntes = true,
+    existeDepoisDoLock = true,
+    turmasDosIntegrantes = [1, 1],
+  }: Opcoes = {}) {
+    const grupoAtual = {
+      ...grupoDoBanco(20, turmasDosIntegrantes),
+      fisica: { minimoIntegrantes: 2, maximoIntegrantes: 3, multiturma: false },
+    };
+    const depoisDaRemocao = grupoDoBanco(20, turmasDosIntegrantes.slice(1));
+    const tx = {
+      $queryRaw: vi.fn().mockResolvedValue([]),
+      grupo: {
+        findUnique: vi.fn().mockResolvedValue(existeDepoisDoLock ? grupoAtual : null),
+        findUniqueOrThrow: vi.fn().mockResolvedValue(depoisDaRemocao),
+        delete: vi.fn().mockResolvedValue({}),
+      },
+      inscricao: { update: vi.fn().mockResolvedValue({}) },
+    };
+    const $transaction = vi.fn((callback: (cliente: typeof tx) => unknown) => callback(tx));
+    const prisma = {
+      grupo: { findUnique: vi.fn().mockResolvedValue(existeAntes ? { fisicaId: 10 } : null) },
+      $transaction,
+    };
+    return { tx, $transaction, deps: { prisma: prisma as never } };
+  }
+
+  it('trava a Física do grupo antes de reler o grupo', async () => {
+    const { tx, deps } = prismaDoGrupo();
+
+    await removerIntegrante(deps, 20, 100);
+
+    const [, fisicaId] = tx.$queryRaw.mock.calls[0] as [TemplateStringsArray, number];
+    expect(fisicaId).toBe(10);
+    expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      tx.grupo.findUnique.mock.invocationCallOrder[0]!,
+    );
+  });
+
+  it('tira o aluno do grupo e devolve o grupo sem ele', async () => {
+    const { tx, deps } = prismaDoGrupo();
+
+    const { grupo } = await removerIntegrante(deps, 20, 100);
+
+    expect(tx.inscricao.update).toHaveBeenCalledWith({
+      where: { alunoId_fisicaId: { alunoId: 100, fisicaId: 10 } },
+      data: { grupoId: null, entrouNoGrupoEm: null },
+    });
+    expect(tx.grupo.delete).not.toHaveBeenCalled();
+    expect(grupo).toMatchObject({ id: 20, formado: false, integrantes: [{ id: 100 }] });
+  });
+
+  it('o último integrante: apaga o grupo depois de desvinculá-lo e devolve grupo null', async () => {
+    const { tx, deps } = prismaDoGrupo({ turmasDosIntegrantes: [1] });
+
+    await expect(removerIntegrante(deps, 20, 100)).resolves.toEqual({ grupo: null });
+
+    expect(tx.grupo.delete).toHaveBeenCalledWith({ where: { id: 20 } });
+    expect(tx.inscricao.update.mock.invocationCallOrder[0]).toBeLessThan(
+      tx.grupo.delete.mock.invocationCallOrder[0]!,
+    );
+  });
+
+  it('lança NaoEncontrado sem abrir transação se o grupo não existe', async () => {
+    const { $transaction, deps } = prismaDoGrupo({ existeAntes: false });
+
+    await expect(removerIntegrante(deps, 20, 100)).rejects.toEqual(
+      new NaoEncontrado('Grupo não encontrado.'),
+    );
+    expect($transaction).not.toHaveBeenCalled();
+  });
+
+  it('lança NaoEncontrado se o grupo some enquanto espera o lock', async () => {
+    const { tx, deps } = prismaDoGrupo({ existeDepoisDoLock: false });
+
+    await expect(removerIntegrante(deps, 20, 100)).rejects.toEqual(
+      new NaoEncontrado('Grupo não encontrado.'),
+    );
+    expect(tx.inscricao.update).not.toHaveBeenCalled();
+  });
+
+  it('lança NaoEncontrado se o aluno não é integrante, sem gravar nada', async () => {
+    const { tx, deps } = prismaDoGrupo();
+
+    await expect(removerIntegrante(deps, 20, 999)).rejects.toEqual(
+      new NaoEncontrado('Aluno não encontrado neste grupo.'),
+    );
+    expect(tx.inscricao.update).not.toHaveBeenCalled();
+    expect(tx.grupo.delete).not.toHaveBeenCalled();
   });
 });

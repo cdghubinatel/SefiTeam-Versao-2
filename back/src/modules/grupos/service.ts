@@ -17,6 +17,7 @@ import type {
   CriarGrupoBody,
   Grupo,
   MinhasFisicas,
+  RemocaoDeIntegrante,
 } from './schemas.js';
 
 type Deps = { prisma: Pick<PrismaClient, 'edicao' | 'inscricao' | 'grupo' | '$queryRaw'> };
@@ -389,20 +390,20 @@ export async function entrarNoGrupo(
   });
 }
 
-/** Grupo relido depois do lock, com a configuração da Física que as regras de inclusão usam. */
-const selectGrupoParaIncluir = {
+/** Grupo relido depois do lock, com a configuração da Física que as regras usam. */
+const selectGrupoComRegras = {
   ...selectGrupo,
   fisica: {
     select: { minimoIntegrantes: true, maximoIntegrantes: true, multiturma: true },
   },
 } satisfies Prisma.GrupoSelect;
 
-type GrupoParaIncluir = Prisma.GrupoGetPayload<{ select: typeof selectGrupoParaIncluir }>;
+type GrupoComRegras = Prisma.GrupoGetPayload<{ select: typeof selectGrupoComRegras }>;
 
 async function grupoDepoisDoLock(tx: Transacao, grupoId: number) {
   const grupo = await tx.grupo.findUnique({
     where: { id: grupoId },
-    select: selectGrupoParaIncluir,
+    select: selectGrupoComRegras,
   });
   if (!grupo) {
     throw grupoNaoEncontrado();
@@ -415,7 +416,7 @@ async function grupoDepoisDoLock(tx: Transacao, grupoId: number) {
  * sem multiturma, a turma do grupo. Os novos entram juntos, depois dos atuais.
  * Precisa rodar com a Física já travada.
  */
-async function incluirNoGrupo(tx: Transacao, grupo: GrupoParaIncluir, alunoIds: number[]) {
+async function incluirNoGrupo(tx: Transacao, grupo: GrupoComRegras, alunoIds: number[]) {
   const { id: grupoId, fisicaId, fisica, integrantes } = grupo;
   if (integrantes.length + alunoIds.length > fisica.maximoIntegrantes) {
     throw new GrupoCheio(fisica.maximoIntegrantes);
@@ -488,5 +489,43 @@ export async function adicionarIntegrantesComoAdmin(
   return deps.prisma.$transaction(async (tx) => {
     await travarFisica(tx, fisicaId);
     return incluirNoGrupo(tx, await grupoDepoisDoLock(tx, grupoId), alunos);
+  });
+}
+
+/**
+ * O admin tira um aluno do grupo, em qualquer edição e sem prazo. O grupo pode ficar abaixo do
+ * mínimo (`formado: false`). Se era o último integrante, o grupo é apagado junto (não existe
+ * grupo vazio) e a resposta traz `grupo: null`; o número dele fica livre para o próximo grupo.
+ */
+export async function removerIntegrante(
+  deps: DepsDoGrupo,
+  grupoId: number,
+  alunoId: number,
+): Promise<RemocaoDeIntegrante> {
+  const fisicaId = await fisicaDoGrupo(deps, grupoId);
+
+  return deps.prisma.$transaction(async (tx) => {
+    await travarFisica(tx, fisicaId);
+
+    const grupo = await grupoDepoisDoLock(tx, grupoId);
+    if (!grupo.integrantes.some((integrante) => integrante.aluno.id === alunoId)) {
+      throw new NaoEncontrado('Aluno não encontrado neste grupo.');
+    }
+
+    // Desvincular antes de apagar: a FK (grupo_id, fisica_id) é ON DELETE RESTRICT.
+    await tx.inscricao.update({
+      where: { alunoId_fisicaId: { alunoId, fisicaId } },
+      data: { grupoId: null, entrouNoGrupoEm: null },
+    });
+    if (grupo.integrantes.length === 1) {
+      await tx.grupo.delete({ where: { id: grupoId } });
+      return { grupo: null };
+    }
+
+    return {
+      grupo: paraGrupo(
+        await tx.grupo.findUniqueOrThrow({ where: { id: grupoId }, select: selectGrupo }),
+      ),
+    };
   });
 }
