@@ -138,10 +138,10 @@ Validadas no back-end, numa transação que começa travando a linha da Física 
 
 | Regra                                       | Quando                                             |
 | ------------------------------------------- | -------------------------------------------------- |
-| Integrantes ≤ `maximo_integrantes`          | Criar grupo / entrar / admin adicionar             |
+| Integrantes ≤ `maximo_integrantes`          | Criar grupo / entrar / adicionar (aluno e admin)   |
 | Grupos ≤ `quantidade_grupos` da Física      | Criar grupo                                        |
 | Agora ≤ `data_limite`                       | Ações do aluno (o admin pode alterar após o prazo) |
-| Multiturma desligado → todos da mesma turma | Criar grupo / entrar / admin adicionar             |
+| Multiturma desligado → todos da mesma turma | Criar grupo / entrar / adicionar (aluno e admin)   |
 
 ## Futuro (fora do escopo atual)
 

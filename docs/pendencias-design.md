@@ -27,4 +27,9 @@ Regras em [grupos.md](grupos.md).
 - [ ] **Aluno adicionar colegas ao próprio grupo**: qualquer integrante pode incluir colegas sem grupo, até o prazo e respeitando o máximo e a turma. O Figma não tem essa ação. Sugestão: no card do grupo (dashboard) ou na tela "Montar Grupo", um botão "Adicionar colegas" que abre a mesma busca/seleção da aba "Criar um grupo", com o limite de vagas restantes.
 - [ ] **"Montar Grupo" para quem já tem grupo**: a aba "Entrar em um grupo" não se aplica (a API responde `409 JA_EM_GRUPO`). A tela deve mostrar o grupo do aluno e a ação de adicionar colegas, ou o front não deve levar o aluno até ela.
 - [ ] **Criar grupo: mínimo de colegas.** O grupo já nasce formado: o botão "Criar grupo" deve ficar desabilitado até quem cria + selecionados atingir o mínimo da Física (ex.: "1/2 selecionados — selecione mais 1 colega"). O contador "3/5 selecionados" do Figma já vai nessa direção; falta o estado desabilitado e a mensagem. Se a API responder `409 GRUPO_INCOMPLETO`, mostrar a mensagem dela.
+- [ ] **Admin: erros ao adicionar alunos a um grupo**: o modal "Adicionar Aluno no Grupo" (`Admin/ListaGrupos`) já existe e bate com a API (`POST /grupos/:grupoId/integrantes`). Como o admin também respeita o máximo e a turma, o modal precisa de um lugar para a mensagem de `409` (`GRUPO_CHEIO`, `TURMA_DIFERENTE`, `JA_EM_GRUPO`), e o "Confirmar" deveria ficar desabilitado quando a seleção passa das vagas (o contador "4/5 Integrantes" já ajuda).
+
+## Alunos (admin)
+
+- [ ] **Campo e-mail nos modais "Adicionar Aluno" e "Editar Aluno"** (`Admin/ListaAlunos`): a planilha não traz e-mail e o sistema não usa e-mail (login = curso + matrícula). Remover o campo.
 - [ ] **Busca de colegas**: o placeholder "Buscar por nome ou matrícula" está certo; vale indicar que a busca ignora acentos e maiúsculas (ex.: "joao" encontra "João").

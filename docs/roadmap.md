@@ -18,17 +18,20 @@ O front-end só começa quando o back-end estiver finalizado. Ordem combinada:
    - [x] Criar grupo (com colegas), com lock na Física e testes de concorrência. O grupo já nasce formado (`GRUPO_INCOMPLETO` abaixo do mínimo).
    - [x] Entrar num grupo, com testes de concorrência (última vaga, clique duplo, criar e entrar ao mesmo tempo).
    - [x] Mensagens de validação do Zod em português (`z.locales.ptBR`).
-   - [ ] Adicionar integrantes (aluno do grupo até o prazo; admin sempre), remover integrante e apagar grupo (admin).
+   - Entrega 4: ações de gerenciamento, dividida em três partes. O admin age em **qualquer edição** e **sem prazo**, mas respeita o máximo de integrantes e a turma; as telas do admin focam na última edição que está ou já foi ativa (o professor ajusta os grupos depois do prazo).
+     - [x] **4a. Adicionar integrantes** (`POST /grupos/:grupoId/integrantes`): qualquer integrante, na edição ativa e até o prazo; o admin, em qualquer grupo. Tudo ou nada, com testes de concorrência.
+     - [ ] **4b. Remover integrante e apagar grupo** (admin). Remover: `DELETE /grupos/:grupoId/integrantes/:alunoId`, um aluno por vez, responde `200 { grupo }`, com `grupo: null` quando o último integrante sai e o grupo é apagado. Apagar: `DELETE /grupos/:grupoId` → `204`, os integrantes ficam sem grupo. Os outros grupos **não** são renumerados (o próximo grupo criado ocupa o número livre). Trocar um aluno de grupo = remover + adicionar (sem "mover").
+     - [ ] **4c. Admin cria grupo e leituras do admin**. Criar: com a lista de alunos, respeitando o máximo, a turma e a quantidade de grupos, **sem exigir o mínimo**; `criado_por_id` = admin. Leituras mínimas para gerenciar: grupos de uma Física (com integrantes, vagas e `formado`) e alunos sem grupo (com a busca sem acentos), padrão na última edição ativa. Antes de planejar, conferir as telas `Admin/ListaGrupos` e `Admin/ListaAlunos` no Figma.
    - O aluno cria um grupo ou entra num grupo existente em cada Física, até o prazo, e pode adicionar colegas ao seu grupo. Ele não sai do grupo; só o admin remove.
    - Regras: máximo de integrantes, quantidade de grupos por Física, prazo da edição e multiturma.
-   - O admin pode adicionar e remover alunos e apagar grupos, inclusive após o prazo.
+   - Sem histórico de quem fez cada ação: é controle interno da organização.
 2. **Edições e upload da planilha** (formato definido: é o mesmo que a professora recebe e envia)
    - Criar a edição (semestre e prazo) e importar a planilha (`.xlsx`): uma aba por Física, com o nome da aba como código (`Fis1`, `Fis2`...). Colunas, na linha 1: **Curso** (sigla, ex.: `GES`), **Matricula**, **Aluno** (nome completo) e **Turma**. Não há e-mail nem a configuração das Físicas.
    - Configurar cada Física: quantidade de grupos, mínimo e máximo de integrantes, multiturma.
    - Apenas uma edição ativa por vez.
    - Alunos novos são cadastrados com `loginDoAluno({ curso, matricula })` e a senha `senhaDoAluno({ nome })`. Alunos já cadastrados em edições anteriores (mesmo curso + matrícula) são reaproveitados, atualizando o nome e a senha.
    - A definir no plano da entrega: lib para ler `.xlsx`, contrato da API do assistente (Upload → Prazo → Físicas → Revisão) e validações da planilha (coluna faltando, linha repetida, aluno em duas turmas da mesma aba).
-3. **Alunos (admin)**: listagem de alunos e grupos.
+3. **Alunos (admin)**: listagem completa de alunos e grupos (filtros, todas as Físicas, exportação), além das leituras mínimas da Entrega 4c.
 
 ## Front-end
 
