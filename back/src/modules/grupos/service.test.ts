@@ -9,6 +9,8 @@ import {
   TurmaDiferente,
 } from '../../shared/errors/app-error.js';
 import {
+  adicionarIntegrantesComoAdmin,
+  adicionarIntegrantesComoAluno,
   criarGrupo,
   entrarNoGrupo,
   listarColegasDisponiveis,
@@ -481,5 +483,245 @@ describe('entrarNoGrupo', () => {
     const { deps } = prismaDoGrupo({ inscricaoDoAluno: null });
 
     await expect(entrarNoGrupo(deps, 1, 20)).rejects.toThrow('Grupo não encontrado.');
+  });
+});
+
+describe('adicionarIntegrantes', () => {
+  const amanha = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+  type NovoNoBanco = { turmaId: number; grupoId: number | null; aluno: { nome: string } };
+
+  type Opcoes = {
+    existeAntes?: boolean;
+    existeDepoisDoLock?: boolean;
+    turmasDosIntegrantes?: readonly number[];
+    multiturma?: boolean;
+    maximoIntegrantes?: number;
+    /** Inscrição de quem adiciona (aluno) na edição ativa; `null` = não inscrito / edição inativa. */
+    minhaInscricao?: { grupoId: number | null; dataLimite?: Date } | null;
+    novosNoBanco?: readonly NovoNoBanco[];
+  };
+
+  function novo(nome: string, dados: { turmaId?: number; grupoId?: number | null } = {}) {
+    return { turmaId: dados.turmaId ?? 1, grupoId: dados.grupoId ?? null, aluno: { nome } };
+  }
+
+  /** Prisma com a leitura fora da transação e um `tx` mockado dentro dela; o grupo é o 20. */
+  function prismaDoGrupo({
+    existeAntes = true,
+    existeDepoisDoLock = true,
+    turmasDosIntegrantes = [1],
+    multiturma = false,
+    maximoIntegrantes = 3,
+    minhaInscricao = { grupoId: 20 },
+    novosNoBanco = [novo('Ana')],
+  }: Opcoes = {}) {
+    const grupoAtual = {
+      ...grupoDoBanco(20, turmasDosIntegrantes),
+      fisica: { minimoIntegrantes: 2, maximoIntegrantes, multiturma },
+    };
+    const tx = {
+      $queryRaw: vi.fn().mockResolvedValue([]),
+      grupo: {
+        findUnique: vi.fn().mockResolvedValue(existeDepoisDoLock ? grupoAtual : null),
+        findUniqueOrThrow: vi.fn().mockResolvedValue(grupoAtual),
+      },
+      inscricao: {
+        findFirst: vi.fn().mockResolvedValue(
+          minhaInscricao && {
+            turmaId: 1,
+            grupoId: minhaInscricao.grupoId,
+            fisica: { edicao: { dataLimite: minhaInscricao.dataLimite ?? amanha } },
+          },
+        ),
+        findMany: vi.fn().mockResolvedValue(novosNoBanco),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+    };
+    const $transaction = vi.fn((callback: (cliente: typeof tx) => unknown) => callback(tx));
+    const prisma = {
+      grupo: { findUnique: vi.fn().mockResolvedValue(existeAntes ? { fisicaId: 10 } : null) },
+      $transaction,
+    };
+    return { tx, $transaction, deps: { prisma: prisma as never } };
+  }
+
+  describe('como aluno', () => {
+    it('recusa o próprio id na lista, sem abrir transação', async () => {
+      const { $transaction, deps } = prismaDoGrupo();
+
+      await expect(
+        adicionarIntegrantesComoAluno(deps, 1, 20, { alunos: [7, 1] }),
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        codigo: 'VALIDACAO',
+        detalhes: [{ campo: 'alunos', mensagem: expect.any(String) as string }],
+      });
+      expect($transaction).not.toHaveBeenCalled();
+    });
+
+    it('trava a Física do grupo antes de reler o grupo e a inscrição', async () => {
+      const { tx, deps } = prismaDoGrupo();
+
+      await adicionarIntegrantesComoAluno(deps, 1, 20, { alunos: [7] });
+
+      const [, fisicaId] = tx.$queryRaw.mock.calls[0] as [TemplateStringsArray, number];
+      expect(fisicaId).toBe(10);
+      const ordemDoLock = tx.$queryRaw.mock.invocationCallOrder[0]!;
+      expect(ordemDoLock).toBeLessThan(tx.grupo.findUnique.mock.invocationCallOrder[0]!);
+      expect(ordemDoLock).toBeLessThan(tx.inscricao.findFirst.mock.invocationCallOrder[0]!);
+    });
+
+    it('só procura a inscrição de quem adiciona na edição ativa', async () => {
+      const { tx, deps } = prismaDoGrupo();
+
+      await adicionarIntegrantesComoAluno(deps, 1, 20, { alunos: [7] });
+
+      expect(tx.inscricao.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { alunoId: 1, fisicaId: 10, fisica: { edicao: { ativa: true } } },
+        }),
+      );
+    });
+
+    it('põe os novos no grupo, todos com a mesma data de entrada', async () => {
+      const { tx, deps } = prismaDoGrupo({ novosNoBanco: [novo('Ana'), novo('Bia')] });
+
+      await expect(
+        adicionarIntegrantesComoAluno(deps, 1, 20, { alunos: [7, 8] }),
+      ).resolves.toMatchObject({ id: 20 });
+
+      expect(tx.inscricao.updateMany).toHaveBeenCalledWith({
+        where: { fisicaId: 10, alunoId: { in: [7, 8] } },
+        data: { grupoId: 20, entrouNoGrupoEm: expect.any(Date) as Date },
+      });
+    });
+
+    it.each([
+      ['o grupo some enquanto espera o lock', { existeDepoisDoLock: false }, NaoEncontrado],
+      ['o aluno não está inscrito ou a edição é inativa', { minhaInscricao: null }, NaoEncontrado],
+      ['o aluno não tem grupo', { minhaInscricao: { grupoId: null } }, NaoEncontrado],
+      ['o aluno é de outro grupo', { minhaInscricao: { grupoId: 21 } }, NaoEncontrado],
+      [
+        'o prazo terminou',
+        { minhaInscricao: { grupoId: 20, dataLimite: new Date(Date.now() - 1000) } },
+        PrazoEncerrado,
+      ],
+    ] as const)('lança erro quando %s, sem gravar nada', async (_caso, opcoes, Erro) => {
+      const { tx, deps } = prismaDoGrupo(opcoes);
+
+      await expect(
+        adicionarIntegrantesComoAluno(deps, 1, 20, { alunos: [7] }),
+      ).rejects.toBeInstanceOf(Erro);
+      expect(tx.inscricao.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('quem não é integrante recebe a mesma mensagem de grupo inexistente', async () => {
+      const { deps } = prismaDoGrupo({ minhaInscricao: { grupoId: 21 } });
+
+      await expect(adicionarIntegrantesComoAluno(deps, 1, 20, { alunos: [7] })).rejects.toEqual(
+        new NaoEncontrado('Grupo não encontrado.'),
+      );
+    });
+  });
+
+  describe('como admin', () => {
+    it('não exige inscrição, edição ativa nem prazo', async () => {
+      const { tx, deps } = prismaDoGrupo({ minhaInscricao: null });
+
+      await adicionarIntegrantesComoAdmin(deps, 20, { alunos: [7] });
+
+      expect(tx.inscricao.findFirst).not.toHaveBeenCalled();
+      expect(tx.inscricao.updateMany).toHaveBeenCalled();
+    });
+
+    it('trava a Física antes de reler o grupo', async () => {
+      const { tx, deps } = prismaDoGrupo();
+
+      await adicionarIntegrantesComoAdmin(deps, 20, { alunos: [7] });
+
+      expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+        tx.grupo.findUnique.mock.invocationCallOrder[0]!,
+      );
+    });
+
+    it('lança NaoEncontrado sem abrir transação se o grupo não existe', async () => {
+      const { $transaction, deps } = prismaDoGrupo({ existeAntes: false });
+
+      await expect(adicionarIntegrantesComoAdmin(deps, 20, { alunos: [7] })).rejects.toEqual(
+        new NaoEncontrado('Grupo não encontrado.'),
+      );
+      expect($transaction).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('regras comuns (aluno e admin)', () => {
+    type DepsDoGrupo = Parameters<typeof adicionarIntegrantesComoAdmin>[0];
+    const papeis = [
+      [
+        'aluno',
+        (deps: DepsDoGrupo, alunos: number[]) =>
+          adicionarIntegrantesComoAluno(deps, 1, 20, { alunos }),
+      ],
+      [
+        'admin',
+        (deps: DepsDoGrupo, alunos: number[]) =>
+          adicionarIntegrantesComoAdmin(deps, 20, { alunos }),
+      ],
+    ] as const;
+
+    describe.each(papeis)('como %s', (_papel, adicionar) => {
+      it.each([
+        ['os novos passam do máximo', { turmasDosIntegrantes: [1, 1] }, [7, 8], GrupoCheio],
+        [
+          'um novo não está inscrito na Física',
+          { novosNoBanco: [novo('Ana')] },
+          [7, 8],
+          NaoEncontrado,
+        ],
+        ['um novo já tem grupo', { novosNoBanco: [novo('Ana', { grupoId: 4 })] }, [7], JaEmGrupo],
+        [
+          'um novo é de outra turma (sem multiturma)',
+          { novosNoBanco: [novo('Daniel', { turmaId: 2 })] },
+          [7],
+          TurmaDiferente,
+        ],
+      ] as const)('lança erro quando %s, sem gravar nada', async (_caso, opcoes, alunos, Erro) => {
+        const { tx, deps } = prismaDoGrupo(opcoes);
+
+        await expect(adicionar(deps, [...alunos])).rejects.toBeInstanceOf(Erro);
+        expect(tx.inscricao.updateMany).not.toHaveBeenCalled();
+      });
+
+      it('enche até exatamente o máximo', async () => {
+        const { tx, deps } = prismaDoGrupo({ turmasDosIntegrantes: [1, 1] });
+
+        await adicionar(deps, [7]);
+
+        expect(tx.inscricao.updateMany).toHaveBeenCalled();
+      });
+
+      it('com multiturma, aceita aluno de outra turma', async () => {
+        const { tx, deps } = prismaDoGrupo({
+          multiturma: true,
+          novosNoBanco: [novo('Daniel', { turmaId: 2 })],
+        });
+
+        await adicionar(deps, [7]);
+
+        expect(tx.inscricao.updateMany).toHaveBeenCalled();
+      });
+    });
+
+    it('compara a turma do novo com as turmas do grupo', async () => {
+      const { tx, deps } = prismaDoGrupo({
+        turmasDosIntegrantes: [2],
+        novosNoBanco: [novo('Daniel', { turmaId: 2 })],
+      });
+
+      await adicionarIntegrantesComoAdmin(deps, 20, { alunos: [7] });
+
+      expect(tx.inscricao.updateMany).toHaveBeenCalled();
+    });
   });
 });

@@ -11,16 +11,26 @@ export const colegasQuerySchema = z.object({
   busca: z.string().trim().max(100).optional(),
 });
 
+/** Ids de aluno, sem repetição, até 50 por requisição. */
+function idsDeAlunos({ minimo }: { minimo: number }) {
+  return z
+    .array(z.number().int().positive())
+    .min(minimo)
+    .max(50)
+    .refine((ids) => new Set(ids).size === ids.length, 'A lista não pode ter ids repetidos.');
+}
+
 export const criarGrupoBodySchema = z.object({
   /**
    * Ids (de aluno) dos colegas que entram junto com quem cria. Quem cria + colegas precisa
    * atingir o mínimo da Física; vazio só passa se o mínimo for 1.
    */
-  colegas: z
-    .array(z.number().int().positive())
-    .max(50)
-    .refine((ids) => new Set(ids).size === ids.length, 'A lista não pode ter ids repetidos.')
-    .default([]),
+  colegas: idsDeAlunos({ minimo: 0 }).default([]),
+});
+
+export const adicionarIntegrantesBodySchema = z.object({
+  /** Ids (de aluno) de quem entra no grupo: inscritos na Física e sem grupo nela. */
+  alunos: idsDeAlunos({ minimo: 1 }),
 });
 
 /** Aluno como aparece nas listas: o front monta "GES 589 · Turma F01-A". */
@@ -63,6 +73,7 @@ export const minhasFisicasSchema = z.object({
 });
 
 export type CriarGrupoBody = z.infer<typeof criarGrupoBodySchema>;
+export type AdicionarIntegrantesBody = z.infer<typeof adicionarIntegrantesBodySchema>;
 export type Grupo = z.infer<typeof grupoSchema>;
 export type AlunoResumo = z.infer<typeof alunoResumoSchema>;
 export type MinhasFisicas = z.infer<typeof minhasFisicasSchema>;

@@ -2,6 +2,7 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { erroSchema } from '../../shared/errors/schemas.js';
 import {
+  adicionarIntegrantesBodySchema,
   alunoResumoSchema,
   colegasQuerySchema,
   criarGrupoBodySchema,
@@ -11,6 +12,8 @@ import {
   minhasFisicasSchema,
 } from './schemas.js';
 import {
+  adicionarIntegrantesComoAdmin,
+  adicionarIntegrantesComoAluno,
   criarGrupo,
   entrarNoGrupo,
   listarColegasDisponiveis,
@@ -19,6 +22,7 @@ import {
 } from './service.js';
 
 const somenteAluno = { papeis: ['ALUNO' as const] };
+const alunoOuAdmin = { papeis: ['ALUNO' as const, 'ADMIN' as const] };
 
 /** Registrado sem prefixo: as rotas ficam em `/fisicas/...` e `/grupos/...`. */
 export const gruposRoutes: FastifyPluginAsyncZod = async (app) => {
@@ -144,5 +148,34 @@ export const gruposRoutes: FastifyPluginAsyncZod = async (app) => {
       },
     },
     async (request) => entrarNoGrupo(deps, request.usuario.id, request.params.grupoId),
+  );
+
+  app.post(
+    '/grupos/:grupoId/integrantes',
+    {
+      config: alunoOuAdmin,
+      schema: {
+        tags: ['grupos'],
+        summary: 'Adiciona integrantes a um grupo',
+        description:
+          'Os `alunos` (ids de aluno, inscritos na Física e sem grupo nela) entram no grupo, sem precisar aceitar; tudo ou nada. **Aluno:** só no grupo de que é integrante, na edição ativa, até o prazo; incluir o próprio id dá `400`. **Admin:** qualquer grupo, de qualquer edição, sem prazo. Os dois respeitam o máximo de integrantes e a turma. Erros, na ordem: `404` (grupo não encontrado; para o aluno, também se ele não é integrante), `409 PRAZO_ENCERRADO` (só aluno), `409 GRUPO_CHEIO`, `404` (aluno não inscrito na Física), `409 JA_EM_GRUPO`, `409 TURMA_DIFERENTE`.',
+        params: grupoParamsSchema,
+        body: adicionarIntegrantesBodySchema,
+        response: {
+          200: grupoSchema,
+          400: erroSchema,
+          401: erroSchema,
+          403: erroSchema,
+          404: erroSchema,
+          409: erroSchema,
+        },
+      },
+    },
+    async (request) => {
+      const { usuario, params, body } = request;
+      return usuario.papel === 'ADMIN'
+        ? adicionarIntegrantesComoAdmin(deps, params.grupoId, body)
+        : adicionarIntegrantesComoAluno(deps, usuario.id, params.grupoId, body);
+    },
   );
 };
