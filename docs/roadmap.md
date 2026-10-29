@@ -20,8 +20,8 @@ O front-end só começa quando o back-end estiver finalizado. Ordem combinada:
    - [x] Mensagens de validação do Zod em português (`z.locales.ptBR`).
    - Entrega 4: ações de gerenciamento, dividida em três partes. O admin age em **qualquer edição** e **sem prazo**, mas respeita o máximo de integrantes e a turma; as telas do admin focam na última edição que está ou já foi ativa (o professor ajusta os grupos depois do prazo).
      - [x] **4a. Adicionar integrantes** (`POST /grupos/:grupoId/integrantes`): qualquer integrante, na edição ativa e até o prazo; o admin, em qualquer grupo. Tudo ou nada, com testes de concorrência.
-     - [ ] **4b. Remover integrante e apagar grupo** (admin). Remover: `DELETE /grupos/:grupoId/integrantes/:alunoId`, um aluno por vez, responde `200 { grupo }`, com `grupo: null` quando o último integrante sai e o grupo é apagado. Apagar: `DELETE /grupos/:grupoId` → `204`, os integrantes ficam sem grupo. Os outros grupos **não** são renumerados (o próximo grupo criado ocupa o número livre). Trocar um aluno de grupo = remover + adicionar (sem "mover").
-     - [ ] **4c. Admin cria grupo e leituras do admin**. Criar: com a lista de alunos, respeitando o máximo, a turma e a quantidade de grupos, **sem exigir o mínimo**; `criado_por_id` = admin. Leituras mínimas para gerenciar: grupos de uma Física (com integrantes, vagas e `formado`) e alunos sem grupo (com a busca sem acentos), padrão na última edição ativa. Antes de planejar, conferir as telas `Admin/ListaGrupos` e `Admin/ListaAlunos` no Figma.
+     - [x] **4b. Remover integrante** (`DELETE /grupos/:grupoId/integrantes/:alunoId`, admin): um aluno por vez, responde `200 { grupo }`, com `grupo: null` quando o último integrante sai e o grupo é apagado em cascata. **Não existe rota de apagar grupo** (decisão do grupo; o Figma também não tem). Os outros grupos não são renumerados. Trocar um aluno de grupo = remover + adicionar (sem "mover").
+     - [ ] **4c. Admin cria grupo e leituras do admin**. Criar: com a lista de alunos, respeitando o máximo, a turma e a quantidade de grupos, **sem exigir o mínimo**; `criado_por_id` = admin. Leituras mínimas para gerenciar: grupos de uma Física (com integrantes, vagas e `formado`) e alunos sem grupo (com a busca sem acentos), padrão na última edição ativa. O Figma (`Admin/ListaGrupos`) tem filtros por Física e por status do grupo, o contador "3/5 Integrantes" em cada card e o modal "Adicionar Aluno no Grupo", com busca por nome ou matrícula e filtro por Física-Turma.
    - O aluno cria um grupo ou entra num grupo existente em cada Física, até o prazo, e pode adicionar colegas ao seu grupo. Ele não sai do grupo; só o admin remove.
    - Regras: máximo de integrantes, quantidade de grupos por Física, prazo da edição e multiturma.
    - Sem histórico de quem fez cada ação: é controle interno da organização.
@@ -31,7 +31,11 @@ O front-end só começa quando o back-end estiver finalizado. Ordem combinada:
    - Apenas uma edição ativa por vez.
    - Alunos novos são cadastrados com `loginDoAluno({ curso, matricula })` e a senha `senhaDoAluno({ nome })`. Alunos já cadastrados em edições anteriores (mesmo curso + matrícula) são reaproveitados, atualizando o nome e a senha.
    - A definir no plano da entrega: lib para ler `.xlsx`, contrato da API do assistente (Upload → Prazo → Físicas → Revisão) e validações da planilha (coluna faltando, linha repetida, aluno em duas turmas da mesma aba).
-3. **Alunos (admin)**: listagem completa de alunos e grupos (filtros, todas as Físicas, exportação), além das leituras mínimas da Entrega 4c.
+3. **Alunos (admin)**: listagem completa de alunos e grupos (filtros, todas as Físicas), além das leituras mínimas da Entrega 4c. A planejar, com as perguntas de negócio de cada ação (o Figma `Admin/ListaAlunos` já tem as telas):
+   - Adicionar um aluno à edição manualmente (matrícula, curso, nome, Física e turma), fora da planilha.
+   - Editar um aluno, inclusive a turma (e se ele já estiver num grupo sem multiturma?).
+   - Tirar um aluno da edição ("não estará mais presente nessa edição"; e se ele for o último integrante de um grupo?).
+   - Exportar a planilha de grupos (botão nas duas telas).
 
 ## Front-end
 

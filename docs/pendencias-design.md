@@ -28,8 +28,9 @@ Regras em [grupos.md](grupos.md).
 - [ ] **"Montar Grupo" para quem já tem grupo**: a aba "Entrar em um grupo" não se aplica (a API responde `409 JA_EM_GRUPO`). A tela deve mostrar o grupo do aluno e a ação de adicionar colegas, ou o front não deve levar o aluno até ela.
 - [ ] **Criar grupo: mínimo de colegas.** O grupo já nasce formado: o botão "Criar grupo" deve ficar desabilitado até quem cria + selecionados atingir o mínimo da Física (ex.: "1/2 selecionados — selecione mais 1 colega"). O contador "3/5 selecionados" do Figma já vai nessa direção; falta o estado desabilitado e a mensagem. Se a API responder `409 GRUPO_INCOMPLETO`, mostrar a mensagem dela.
 - [ ] **Admin: erros ao adicionar alunos a um grupo**: o modal "Adicionar Aluno no Grupo" (`Admin/ListaGrupos`) já existe e bate com a API (`POST /grupos/:grupoId/integrantes`). Como o admin também respeita o máximo e a turma, o modal precisa de um lugar para a mensagem de `409` (`GRUPO_CHEIO`, `TURMA_DIFERENTE`, `JA_EM_GRUPO`), e o "Confirmar" deveria ficar desabilitado quando a seleção passa das vagas (o contador "4/5 Integrantes" já ajuda).
+- [ ] **Admin: confirmar antes de remover um integrante**: a lixeira de cada integrante (`Admin/ListaGrupos`) não tem modal de confirmação, e a API remove na hora (`DELETE /grupos/:grupoId/integrantes/:alunoId`). Sugestão: um modal como o "Confirmar Deletar o Aluno?", avisando quando o aluno é o último integrante, porque aí o grupo é apagado junto.
+- [ ] **Busca de colegas**: o placeholder "Buscar por nome ou matrícula" está certo; vale indicar que a busca ignora acentos e maiúsculas (ex.: "joao" encontra "João").
 
 ## Alunos (admin)
 
 - [ ] **Campo e-mail nos modais "Adicionar Aluno" e "Editar Aluno"** (`Admin/ListaAlunos`): a planilha não traz e-mail e o sistema não usa e-mail (login = curso + matrícula). Remover o campo.
-- [ ] **Busca de colegas**: o placeholder "Buscar por nome ou matrícula" está certo; vale indicar que a busca ignora acentos e maiúsculas (ex.: "joao" encontra "João").

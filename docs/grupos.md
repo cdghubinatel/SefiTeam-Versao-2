@@ -1,10 +1,10 @@
 # Grupos
 
-O aluno cria um grupo ou entra num grupo existente em cada Física em que está inscrito, até o prazo da edição, e pode adicionar colegas ao seu grupo. O admin adiciona e remove alunos e apaga grupos, inclusive depois do prazo.
+O aluno cria um grupo ou entra num grupo existente em cada Física em que está inscrito, até o prazo da edição, e pode adicionar colegas ao seu grupo. O admin adiciona e remove alunos, inclusive depois do prazo; o grupo que fica vazio é apagado.
 
 Código em `back/src/modules/grupos/`. Tabelas `grupo` e `inscricao` ([modelo-banco.md](modelo-banco.md)).
 
-> Em andamento: as leituras do aluno, criar, entrar e **adicionar integrantes** (aluno e admin) estão prontos. Faltam remover integrante e apagar grupo (Entrega 4b) e o admin criar grupo e ler os grupos e alunos de uma Física (Entrega 4c); ver [roadmap](roadmap.md#próximos-passos-back-end). O que falta no Figma está em [pendencias-design.md](pendencias-design.md#grupos).
+> Em andamento: as leituras do aluno, criar, entrar, **adicionar integrantes** (aluno e admin) e **remover integrante** (admin) estão prontos. Faltam o admin criar grupo e ler os grupos e alunos de uma Física (Entrega 4c); ver [roadmap](roadmap.md#próximos-passos-back-end). O que falta no Figma está em [pendencias-design.md](pendencias-design.md#grupos).
 
 ## Regras
 
@@ -14,8 +14,8 @@ Código em `back/src/modules/grupos/`. Tabelas `grupo` e `inscricao` ([modelo-ba
 - Depois, **qualquer integrante** (não só quem criou) pode adicionar colegas sem grupo, até o prazo, respeitando o máximo e a turma. O admin também adiciona, pela mesma rota, em qualquer grupo e sem prazo, mas **respeitando o máximo e a turma**, como o aluno.
 - Para trocar um aluno de grupo, o admin remove e depois adiciona (não existe "mover"). Adicionar quem já tem grupo dá `409 JA_EM_GRUPO`.
 - Cada aluno fica em **um único grupo** por Física. Ações de quem já tem grupo (entrar, criar outro) dão `409 JA_EM_GRUPO`.
-- O aluno **não sai** do grupo. Só o admin remove integrantes. Quando o admin remove o último integrante, o grupo é apagado.
-- **Formado**: o grupo atingiu o mínimo de integrantes da Física. Continua aceitando alunos até o máximo. Como todo grupo criado pelo aluno nasce formado, `formado: false` só aparece quando um grupo perde integrantes (remoção pelo admin, Entrega 4b) ou quando o admin cria um grupo abaixo do mínimo (Entrega 4c).
+- O aluno **não sai** do grupo. Só o admin remove integrantes, um por vez. Quando o admin remove o último integrante, o grupo é apagado junto: não existe grupo vazio nem uma ação separada de apagar grupo (decisão do grupo; o Figma também não tem). Os outros grupos **não** são renumerados, e o número que ficou livre vai para o próximo grupo criado.
+- **Formado**: o grupo atingiu o mínimo de integrantes da Física. Continua aceitando alunos até o máximo. Como todo grupo criado pelo aluno nasce formado, `formado: false` só aparece quando um grupo perde integrantes (remoção pelo admin) ou quando o admin cria um grupo abaixo do mínimo (Entrega 4c).
 - **Multiturma desligado**: o grupo só aceita alunos da turma dos integrantes atuais.
 - **Quantidade de grupos**: o total por Física, mesmo com o multiturma desligado. Risco: uma turma pode ocupar todos os grupos e deixar a outra sem nenhum. Cabe ao professor configurar uma quantidade que comporte todas as turmas.
 - **Numeração**: um grupo novo recebe o menor número livre na Física (com os grupos 1, 3 e 4, o próximo é o 2).
@@ -23,14 +23,15 @@ Código em `back/src/modules/grupos/`. Tabelas `grupo` e `inscricao` ([modelo-ba
 
 ## Rotas
 
-| Método | Rota                                     | Acesso       | Resposta                                              |
-| ------ | ---------------------------------------- | ------------ | ----------------------------------------------------- |
-| GET    | `/fisicas/minhas`                        | ALUNO        | `200` Físicas do aluno na edição ativa                |
-| GET    | `/fisicas/:fisicaId/grupos`              | ALUNO        | `200` grupos em que o aluno pode entrar; `404`; `409` |
-| GET    | `/fisicas/:fisicaId/colegas-disponiveis` | ALUNO        | `200` colegas que ele pode incluir; `404`             |
-| POST   | `/fisicas/:fisicaId/grupos`              | ALUNO        | `201` grupo criado; `400`; `404`; `409`               |
-| POST   | `/grupos/:grupoId/entrar`                | ALUNO        | `200` grupo atualizado; `400`; `404`; `409`           |
-| POST   | `/grupos/:grupoId/integrantes`           | ALUNO, ADMIN | `200` grupo atualizado; `400`; `404`; `409`           |
+| Método | Rota                                     | Acesso       | Resposta                                                |
+| ------ | ---------------------------------------- | ------------ | ------------------------------------------------------- |
+| GET    | `/fisicas/minhas`                        | ALUNO        | `200` Físicas do aluno na edição ativa                  |
+| GET    | `/fisicas/:fisicaId/grupos`              | ALUNO        | `200` grupos em que o aluno pode entrar; `404`; `409`   |
+| GET    | `/fisicas/:fisicaId/colegas-disponiveis` | ALUNO        | `200` colegas que ele pode incluir; `404`               |
+| POST   | `/fisicas/:fisicaId/grupos`              | ALUNO        | `201` grupo criado; `400`; `404`; `409`                 |
+| POST   | `/grupos/:grupoId/entrar`                | ALUNO        | `200` grupo atualizado; `400`; `404`; `409`             |
+| POST   | `/grupos/:grupoId/integrantes`           | ALUNO, ADMIN | `200` grupo atualizado; `400`; `404`; `409`             |
+| DELETE | `/grupos/:grupoId/integrantes/:alunoId`  | ADMIN        | `200` `{ grupo }` (`null` se foi apagado); `400`; `404` |
 
 `:fisicaId` precisa ser inteiro positivo; senão, `400 VALIDACAO`. Física inexistente, de outra edição ou em que o aluno não está inscrito: `404 NAO_ENCONTRADO` ("Física não encontrada.").
 
@@ -139,13 +140,30 @@ Erros, na ordem em que são checados:
 
 O aluno que não é integrante recebe `404`, e não `403`: o front trata `403` como a tela "sem acesso", e aqui é só um grupo que não é dele.
 
+### `DELETE /grupos/:grupoId/integrantes/:alunoId`
+
+Só admin, em qualquer edição e sem prazo. Tira o aluno do grupo (ele fica sem grupo nesta Física e pode entrar em outro ou ser adicionado de novo). Responde `200` com `{ "grupo": Grupo | null }`:
+
+- `grupo` é o grupo atualizado, sem o aluno. Ele pode ficar abaixo do mínimo (`formado: false`).
+- `grupo: null` quando o aluno era o último integrante: o grupo foi apagado na mesma transação (primeiro o aluno é desvinculado, por causa da FK `ON DELETE RESTRICT`, depois o grupo é apagado).
+
+Erros, na ordem em que são checados:
+
+| Status | Código           | Quando                                                                                                      |
+| ------ | ---------------- | ----------------------------------------------------------------------------------------------------------- |
+| 400    | `VALIDACAO`      | `grupoId` ou `alunoId` não é inteiro positivo                                                               |
+| 404    | `NAO_ENCONTRADO` | "Grupo não encontrado.": grupo inexistente (ou apagado enquanto a requisição esperava)                      |
+| 404    | `NAO_ENCONTRADO` | "Aluno não encontrado neste grupo.": o aluno não existe, não tem grupo, é de outro grupo ou de outra Física |
+
+O aluno, mesmo integrante, recebe `403`: ele não sai do grupo nem tira colegas.
+
 ## Concorrência
 
 Toda ação que altera grupos roda numa transação que começa travando a linha da Física (`SELECT ... FOR UPDATE`, em `travarFisica`). Assim, as ações de uma mesma Física rodam uma de cada vez, e as contagens (integrantes, grupos, número livre) não ficam desatualizadas entre a checagem e a gravação. Ações em Físicas diferentes não se bloqueiam.
 
-Nas rotas por grupo (entrar, adicionar integrantes), o service lê primeiro só o `fisicaId` do grupo (`fisicaDoGrupo`), trava a Física e então relê o grupo, que pode ter mudado (ou sido apagado) enquanto esperava o lock.
+Nas rotas por grupo (entrar, adicionar e remover integrantes), o service lê primeiro só o `fisicaId` do grupo (`fisicaDoGrupo`), trava a Física e então relê o grupo, que pode ter mudado (ou sido apagado) enquanto esperava o lock.
 
-Os testes de concorrência (blocos `concorrência` em `routes.criar-grupo.test.ts`, `routes.entrar.test.ts` e `routes.adicionar-integrantes.test.ts`) disparam requisições simultâneas. Criar: dois alunos criando o último grupo, dois alunos incluindo o mesmo colega e o clique duplo. Entrar: dois alunos disputando a última vaga, o clique duplo e o mesmo aluno criando e entrando ao mesmo tempo. Adicionar: dois integrantes disputando a última vaga, o mesmo colega adicionado a dois grupos, o admin adicionando enquanto um aluno entra na última vaga e o clique duplo. Em todos, só uma ação vale e a outra recebe `409`. Sem o lock, todos falham.
+Os testes de concorrência (blocos `concorrência` em `routes.criar-grupo.test.ts`, `routes.entrar.test.ts` e `routes.adicionar-integrantes.test.ts`) disparam requisições simultâneas. Criar: dois alunos criando o último grupo, dois alunos incluindo o mesmo colega e o clique duplo. Entrar: dois alunos disputando a última vaga, o clique duplo e o mesmo aluno criando e entrando ao mesmo tempo. Adicionar: dois integrantes disputando a última vaga, o mesmo colega adicionado a dois grupos, o admin adicionando enquanto um aluno entra na última vaga e o clique duplo. Remover: o clique duplo, os dois últimos integrantes removidos ao mesmo tempo (o grupo é apagado uma vez só) e o último sendo removido enquanto um aluno entra (o grupo nunca fica vazio, e a entrada recebe `404` se chegar depois). O teste "remover de um grupo cheio enquanto um aluno entra" confere só o resultado final: remover apenas libera vaga, então ele passa mesmo sem o lock. Em todos, só uma ação vale e a outra recebe `409`. Sem o lock, todos falham.
 
 ## Dados de demonstração
 
