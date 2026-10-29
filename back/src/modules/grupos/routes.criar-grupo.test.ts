@@ -286,7 +286,7 @@ describe('POST /fisicas/:fisicaId/grupos', () => {
       expect(resposta.statusCode).toBe(404);
       expect(erroDa(resposta)).toEqual({
         codigo: 'NAO_ENCONTRADO',
-        mensagem: 'Um dos colegas selecionados não está inscrito nesta Física.',
+        mensagem: 'Um dos alunos selecionados não está inscrito nesta Física.',
       });
     }
     expect(await contarGrupos(f01.id)).toBe(0);

@@ -35,16 +35,20 @@ export async function criarUsuario(prisma: PrismaClient, dados: NovoUsuario) {
 
 const UM_DIA = 24 * 60 * 60 * 1000;
 
-/** Edição ativa com prazo daqui a 1 dia, salvo se indicado. */
+/**
+ * Edição ativa com prazo daqui a 1 dia, criada agora, salvo se indicado (`criadoEm` define qual é
+ * "a última edição criada", que a lista de grupos do admin usa por padrão).
+ */
 export function criarEdicao(
   prisma: PrismaClient,
-  dados: { semestre?: string; ativa?: boolean; dataLimite?: Date } = {},
+  dados: { semestre?: string; ativa?: boolean; dataLimite?: Date; criadoEm?: Date } = {},
 ) {
   return prisma.edicao.create({
     data: {
       semestre: dados.semestre ?? '2026/1',
       ativa: dados.ativa ?? true,
       dataLimite: dados.dataLimite ?? new Date(Date.now() + UM_DIA),
+      criadoEm: dados.criadoEm,
     },
   });
 }

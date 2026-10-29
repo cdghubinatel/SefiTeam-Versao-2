@@ -17,7 +17,7 @@ O professor (admin) cria uma **edição** da feira e faz upload de uma planilha 
 - Multiturma desligado: o grupo só aceita alunos da mesma turma (ex.: só F01-A). Ligado: aceita turmas diferentes da mesma Física (F01-A com F01-B).
 - Um grupo está **formado** quando atinge o mínimo de integrantes. Ele continua aceitando alunos até o máximo.
 - Quem cria um grupo inclui colegas sem grupo naquela Física, e o grupo **já nasce formado**: precisa ter pelo menos o mínimo de integrantes. Depois, qualquer integrante pode adicionar colegas (até o máximo). O aluno **não sai** do grupo: só o admin remove integrantes.
-- Após o prazo, o aluno não altera mais o grupo; o admin pode adicionar/remover alunos e apagar grupos.
+- Após o prazo, o aluno não altera mais o grupo; o admin pode adicionar e remover alunos. Quando o último integrante é removido, o grupo é apagado (não existe grupo vazio).
 - **Dúvidas Frequentes** são globais e editadas pelo admin.
 - Login do aluno: **curso + matrícula** (ex.: `GES589`). Senha: a **primeira palavra do nome** (ex.: `maria`), sem diferenciar maiúsculas nem acentos. O aluno não troca a senha, e o sistema não envia e-mails. Não há segurança de propósito (os dados são de livre acesso na instituição): detalhes em [docs/autenticacao.md](docs/autenticacao.md).
 
