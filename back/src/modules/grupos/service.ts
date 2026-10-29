@@ -14,8 +14,12 @@ import { estaFormado, menorNumeroLivre, prazoEncerrado, turmaCompativel } from '
 import type {
   AdicionarIntegrantesBody,
   AlunoResumo,
+  AlunosSemGrupoQuery,
   CriarGrupoBody,
+  CriarGrupoComoAdminBody,
   Grupo,
+  GruposDaEdicao,
+  GruposDaEdicaoQuery,
   MinhasFisicas,
   RemocaoDeIntegrante,
 } from './schemas.js';
@@ -222,7 +226,9 @@ async function travarFisica(tx: Transacao, fisicaId: number) {
 
 /**
  * Quem vai entrar no grupo (colegas de quem cria, ou alunos adicionados depois) precisa estar
- * inscrito na Física, sem grupo e, sem multiturma, na turma dos integrantes do grupo.
+ * inscrito na Física, sem grupo e, sem multiturma, na turma dos integrantes do grupo e na dos
+ * outros novos (num grupo criado pelo admin, sem integrantes, o primeiro da lista define a turma).
+ * Os alunos são checados na ordem da lista, para a mensagem de erro não variar.
  */
 async function validarNovosIntegrantes(
   tx: Transacao,
@@ -236,21 +242,24 @@ async function validarNovosIntegrantes(
 
   const inscricoes = await tx.inscricao.findMany({
     where: { fisicaId, alunoId: { in: alunoIds } },
-    select: { turmaId: true, grupoId: true, aluno: { select: { nome: true } } },
+    select: { alunoId: true, turmaId: true, grupoId: true, aluno: { select: { nome: true } } },
   });
   if (inscricoes.length !== alunoIds.length) {
     throw new NaoEncontrado('Um dos alunos selecionados não está inscrito nesta Física.');
   }
+  inscricoes.sort((a, b) => alunoIds.indexOf(a.alunoId) - alunoIds.indexOf(b.alunoId));
 
+  const turmas = [...turmasDoGrupo];
   for (const novo of inscricoes) {
     if (novo.grupoId !== null) {
       throw new JaEmGrupo(`${novo.aluno.nome} já está em um grupo nesta Física.`);
     }
-    if (!turmaCompativel({ multiturma, turmasDoGrupo, turmaDoAluno: novo.turmaId })) {
+    if (!turmaCompativel({ multiturma, turmasDoGrupo: turmas, turmaDoAluno: novo.turmaId })) {
       throw new TurmaDiferente(
         `${novo.aluno.nome} é de outra turma, e esta Física não aceita turmas diferentes no mesmo grupo.`,
       );
     }
+    turmas.push(novo.turmaId);
   }
 }
 
@@ -527,5 +536,153 @@ export async function removerIntegrante(
         await tx.grupo.findUniqueOrThrow({ where: { id: grupoId }, select: selectGrupo }),
       ),
     };
+  });
+}
+
+type DepsDoAdmin = {
+  prisma: Pick<PrismaClient, 'edicao' | 'fisica' | 'inscricao' | 'grupo' | '$queryRaw'>;
+};
+
+/**
+ * Lista de grupos do admin: os grupos de uma edição, com todas as Físicas dela (para os filtros).
+ * Sem `edicaoId`, a última edição criada, mesmo já finalizada (o professor ajusta os grupos depois
+ * do prazo). Filtra por Física e por status; sem paginação (são poucas centenas de grupos por
+ * edição). Sem nenhuma edição, `edicao` vem `null`.
+ */
+export async function listarGruposDaEdicao(
+  { prisma }: DepsDoAdmin,
+  { edicaoId, fisicaId, status }: GruposDaEdicaoQuery,
+): Promise<GruposDaEdicao> {
+  const edicao = await prisma.edicao.findFirst({
+    where: edicaoId === undefined ? {} : { id: edicaoId },
+    select: { id: true, semestre: true, dataLimite: true, ativa: true },
+    orderBy: [{ criadoEm: 'desc' }, { id: 'desc' }],
+  });
+  if (!edicao) {
+    if (edicaoId !== undefined) {
+      throw new NaoEncontrado('Edição não encontrada.');
+    }
+    return { edicao: null, fisicas: [], grupos: [] };
+  }
+
+  const fisicas = await prisma.fisica.findMany({
+    where: { edicaoId: edicao.id },
+    select: {
+      id: true,
+      codigo: true,
+      nome: true,
+      quantidadeGrupos: true,
+      minimoIntegrantes: true,
+      maximoIntegrantes: true,
+      multiturma: true,
+      turmas: { select: { codigo: true }, orderBy: { codigo: 'asc' } },
+    },
+    orderBy: { codigo: 'asc' },
+  });
+  if (fisicaId !== undefined && !fisicas.some((fisica) => fisica.id === fisicaId)) {
+    throw new NaoEncontrado('Física não encontrada.');
+  }
+
+  const grupos = (
+    await prisma.grupo.findMany({
+      where: { fisica: { edicaoId: edicao.id }, fisicaId },
+      select: selectGrupo,
+      orderBy: [{ fisica: { codigo: 'asc' } }, { numero: 'asc' }],
+    })
+  ).map(paraGrupo);
+
+  return {
+    edicao: { ...edicao, dataLimite: edicao.dataLimite.toISOString() },
+    fisicas: fisicas.map(({ turmas, ...fisica }) => ({
+      ...fisica,
+      turmas: turmas.map((turma) => turma.codigo),
+    })),
+    grupos:
+      status === undefined
+        ? grupos
+        : grupos.filter((grupo) => grupo.formado === (status === 'formado')),
+  };
+}
+
+/**
+ * Alunos sem grupo numa Física (de qualquer edição), para os modais do admin: adicionar ao grupo
+ * (o front passa a turma do grupo quando a Física não é multiturma) e criar grupo.
+ */
+export async function listarAlunosSemGrupo(
+  deps: DepsDoAdmin,
+  fisicaId: number,
+  { busca, turma }: AlunosSemGrupoQuery,
+): Promise<AlunoResumo[]> {
+  const fisica = await deps.prisma.fisica.findUnique({
+    where: { id: fisicaId },
+    select: { id: true },
+  });
+  if (!fisica) {
+    throw new NaoEncontrado('Física não encontrada.');
+  }
+  const encontrados = busca ? await alunosDaBusca(deps, fisicaId, busca) : undefined;
+
+  const alunos = await deps.prisma.inscricao.findMany({
+    where: {
+      fisicaId,
+      grupoId: null,
+      alunoId: { in: encontrados },
+      turma: turma === undefined ? undefined : { codigo: turma },
+    },
+    select: selectAlunoResumo,
+    orderBy: { aluno: { nome: 'asc' } },
+  });
+
+  return alunos.map(paraAlunoResumo);
+}
+
+/**
+ * O admin cria um grupo com os alunos escolhidos, em qualquer edição e sem prazo. Não exige o
+ * mínimo (o professor pode montar o grupo aos poucos), mas respeita o máximo, a turma e a
+ * quantidade de grupos da Física. O admin fica como autor. Tudo numa transação, com a Física travada.
+ */
+export async function criarGrupoComoAdmin(
+  { prisma }: DepsComTransacao,
+  adminId: number,
+  fisicaId: number,
+  { alunos }: CriarGrupoComoAdminBody,
+): Promise<Grupo> {
+  return prisma.$transaction(async (tx) => {
+    await travarFisica(tx, fisicaId);
+
+    const fisica = await tx.fisica.findUnique({
+      where: { id: fisicaId },
+      select: { maximoIntegrantes: true, multiturma: true, quantidadeGrupos: true },
+    });
+    if (!fisica) {
+      throw new NaoEncontrado('Física não encontrada.');
+    }
+    if (alunos.length > fisica.maximoIntegrantes) {
+      throw new GrupoCheio(fisica.maximoIntegrantes);
+    }
+    await validarNovosIntegrantes(tx, fisicaId, alunos, {
+      turmasDoGrupo: [],
+      multiturma: fisica.multiturma,
+    });
+
+    const existentes = await tx.grupo.findMany({ where: { fisicaId }, select: { numero: true } });
+    if (existentes.length >= fisica.quantidadeGrupos) {
+      throw new LimiteDeGrupos();
+    }
+
+    const { id } = await tx.grupo.create({
+      data: {
+        fisicaId,
+        numero: menorNumeroLivre(existentes.map((grupo) => grupo.numero)),
+        criadoPorId: adminId,
+      },
+      select: { id: true },
+    });
+    await tx.inscricao.updateMany({
+      where: { fisicaId, alunoId: { in: alunos } },
+      data: { grupoId: id, entrouNoGrupoEm: new Date() },
+    });
+
+    return paraGrupo(await tx.grupo.findUniqueOrThrow({ where: { id }, select: selectGrupo }));
   });
 }

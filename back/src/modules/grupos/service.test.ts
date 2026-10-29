@@ -12,8 +12,11 @@ import {
   adicionarIntegrantesComoAdmin,
   adicionarIntegrantesComoAluno,
   criarGrupo,
+  criarGrupoComoAdmin,
   entrarNoGrupo,
+  listarAlunosSemGrupo,
   listarColegasDisponiveis,
+  listarGruposDaEdicao,
   listarGruposParaEntrar,
   listarMinhasFisicas,
   removerIntegrante,
@@ -825,5 +828,293 @@ describe('removerIntegrante', () => {
     );
     expect(tx.inscricao.update).not.toHaveBeenCalled();
     expect(tx.grupo.delete).not.toHaveBeenCalled();
+  });
+});
+
+describe('listarGruposDaEdicao', () => {
+  const edicao = {
+    id: 3,
+    semestre: '2026/1',
+    dataLimite: new Date('2026-06-16T23:59:00Z'),
+    ativa: true,
+  };
+  const fisicaDoBanco = (id: number, codigo: string) => ({
+    id,
+    codigo,
+    nome: `Física ${codigo}`,
+    quantidadeGrupos: 4,
+    minimoIntegrantes: 2,
+    maximoIntegrantes: 3,
+    multiturma: false,
+    turmas: [{ codigo: 'A' }, { codigo: 'B' }],
+  });
+
+  function prismaDaEdicao({
+    edicaoNoBanco = edicao,
+    grupos = [grupoDoBanco(1, [1, 1]), grupoDoBanco(2, [1])],
+  }: { edicaoNoBanco?: typeof edicao | null; grupos?: ReturnType<typeof grupoDoBanco>[] } = {}) {
+    const prisma = {
+      edicao: { findFirst: vi.fn().mockResolvedValue(edicaoNoBanco) },
+      fisica: {
+        findMany: vi.fn().mockResolvedValue([fisicaDoBanco(10, 'F01'), fisicaDoBanco(11, 'F02')]),
+      },
+      grupo: { findMany: vi.fn().mockResolvedValue(grupos) },
+    };
+    return { prisma, deps: { prisma: prisma as never } };
+  }
+
+  it('sem edicaoId, usa a última edição criada, ativa ou não', async () => {
+    const { prisma, deps } = prismaDaEdicao();
+
+    await listarGruposDaEdicao(deps, {});
+
+    expect(prisma.edicao.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: {}, orderBy: [{ criadoEm: 'desc' }, { id: 'desc' }] }),
+    );
+  });
+
+  it('com edicaoId, usa aquela edição (mesmo inativa)', async () => {
+    const { prisma, deps } = prismaDaEdicao();
+
+    await listarGruposDaEdicao(deps, { edicaoId: 3 });
+
+    expect(prisma.edicao.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 3 } }),
+    );
+  });
+
+  it('sem nenhuma edição, devolve vazio sem consultar Físicas nem grupos', async () => {
+    const { prisma, deps } = prismaDaEdicao({ edicaoNoBanco: null });
+
+    await expect(listarGruposDaEdicao(deps, {})).resolves.toEqual({
+      edicao: null,
+      fisicas: [],
+      grupos: [],
+    });
+    expect(prisma.fisica.findMany).not.toHaveBeenCalled();
+    expect(prisma.grupo.findMany).not.toHaveBeenCalled();
+  });
+
+  it('edicaoId inexistente: NaoEncontrado', async () => {
+    const { deps } = prismaDaEdicao({ edicaoNoBanco: null });
+
+    await expect(listarGruposDaEdicao(deps, { edicaoId: 99 })).rejects.toEqual(
+      new NaoEncontrado('Edição não encontrada.'),
+    );
+  });
+
+  it('Física fora da edição: NaoEncontrado, sem consultar grupos', async () => {
+    const { prisma, deps } = prismaDaEdicao();
+
+    await expect(listarGruposDaEdicao(deps, { fisicaId: 99 })).rejects.toEqual(
+      new NaoEncontrado('Física não encontrada.'),
+    );
+    expect(prisma.grupo.findMany).not.toHaveBeenCalled();
+  });
+
+  it('monta a edição, as Físicas com as turmas e filtra os grupos pela Física no banco', async () => {
+    const { prisma, deps } = prismaDaEdicao();
+
+    const resposta = await listarGruposDaEdicao(deps, { fisicaId: 10 });
+
+    expect(resposta.edicao).toEqual({
+      id: 3,
+      semestre: '2026/1',
+      dataLimite: '2026-06-16T23:59:00.000Z',
+      ativa: true,
+    });
+    expect(resposta.fisicas.map((fisica) => [fisica.codigo, fisica.turmas])).toEqual([
+      ['F01', ['A', 'B']],
+      ['F02', ['A', 'B']],
+    ]);
+    expect(prisma.grupo.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { fisica: { edicaoId: 3 }, fisicaId: 10 } }),
+    );
+  });
+
+  it.each([
+    [undefined, [1, 2]],
+    ['formado', [1]],
+    ['nao-formado', [2]],
+  ] as const)('status %s devolve os grupos %j', async (status, ids) => {
+    const { deps } = prismaDaEdicao();
+
+    const { grupos } = await listarGruposDaEdicao(deps, { status });
+
+    expect(grupos.map((grupo) => grupo.id)).toEqual(ids);
+  });
+});
+
+describe('listarAlunosSemGrupo', () => {
+  function prismaDaFisica({ existe = true } = {}) {
+    const prisma = {
+      fisica: { findUnique: vi.fn().mockResolvedValue(existe ? { id: 10 } : null) },
+      inscricao: { findMany: vi.fn().mockResolvedValue([]) },
+      $queryRaw: vi.fn().mockResolvedValue([{ aluno_id: 7 }]),
+    };
+    return { prisma, deps: { prisma: prisma as never } };
+  }
+
+  it('Física inexistente: NaoEncontrado', async () => {
+    const { prisma, deps } = prismaDaFisica({ existe: false });
+
+    await expect(listarAlunosSemGrupo(deps, 10, {})).rejects.toEqual(
+      new NaoEncontrado('Física não encontrada.'),
+    );
+    expect(prisma.inscricao.findMany).not.toHaveBeenCalled();
+  });
+
+  it('sem filtros: todos os sem grupo da Física, sem consultar o SQL da busca', async () => {
+    const { prisma, deps } = prismaDaFisica();
+
+    await listarAlunosSemGrupo(deps, 10, {});
+
+    expect(prisma.inscricao.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { fisicaId: 10, grupoId: null, alunoId: { in: undefined }, turma: undefined },
+      }),
+    );
+    expect(prisma.$queryRaw).not.toHaveBeenCalled();
+  });
+
+  it('com busca e turma: restringe aos encontrados e ao código da turma', async () => {
+    const { prisma, deps } = prismaDaFisica();
+
+    await listarAlunosSemGrupo(deps, 10, { busca: 'silva', turma: 'A' });
+
+    expect(prisma.inscricao.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { fisicaId: 10, grupoId: null, alunoId: { in: [7] }, turma: { codigo: 'A' } },
+      }),
+    );
+  });
+});
+
+describe('criarGrupoComoAdmin', () => {
+  type Opcoes = {
+    existe?: boolean;
+    multiturma?: boolean;
+    maximoIntegrantes?: number;
+    quantidadeGrupos?: number;
+    novosNoBanco?: readonly {
+      alunoId: number;
+      turmaId: number;
+      grupoId: number | null;
+      aluno: { nome: string };
+    }[];
+    numerosExistentes?: readonly number[];
+  };
+
+  function novo(alunoId: number, nome: string, dados: { turmaId?: number; grupoId?: number } = {}) {
+    return {
+      alunoId,
+      turmaId: dados.turmaId ?? 1,
+      grupoId: dados.grupoId ?? null,
+      aluno: { nome },
+    };
+  }
+
+  function transacao({
+    existe = true,
+    multiturma = false,
+    maximoIntegrantes = 3,
+    quantidadeGrupos = 5,
+    novosNoBanco = [novo(7, 'Ana')],
+    numerosExistentes = [],
+  }: Opcoes = {}) {
+    const tx = {
+      $queryRaw: vi.fn().mockResolvedValue([]),
+      fisica: {
+        findUnique: vi
+          .fn()
+          .mockResolvedValue(existe ? { maximoIntegrantes, multiturma, quantidadeGrupos } : null),
+      },
+      inscricao: {
+        findMany: vi.fn().mockResolvedValue(novosNoBanco),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+      grupo: {
+        findMany: vi.fn().mockResolvedValue(numerosExistentes.map((numero) => ({ numero }))),
+        create: vi.fn().mockResolvedValue({ id: 50 }),
+        findUniqueOrThrow: vi.fn().mockResolvedValue(grupoDoBanco(50, [1])),
+      },
+    };
+    const $transaction = vi.fn((callback: (cliente: typeof tx) => unknown) => callback(tx));
+    return { tx, deps: { prisma: { $transaction } as never } };
+  }
+
+  it('trava a Física antes de ler a configuração', async () => {
+    const { tx, deps } = transacao();
+
+    await criarGrupoComoAdmin(deps, 1, 10, { alunos: [7] });
+
+    expect(tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      tx.fisica.findUnique.mock.invocationCallOrder[0]!,
+    );
+  });
+
+  it('cria com 1 aluno (sem exigir o mínimo), o menor número livre e o admin como autor', async () => {
+    const { tx, deps } = transacao({ numerosExistentes: [1, 3] });
+
+    await expect(criarGrupoComoAdmin(deps, 1, 10, { alunos: [7] })).resolves.toMatchObject({
+      id: 50,
+    });
+
+    expect(tx.grupo.create).toHaveBeenCalledWith({
+      data: { fisicaId: 10, numero: 2, criadoPorId: 1 },
+      select: { id: true },
+    });
+    expect(tx.inscricao.updateMany).toHaveBeenCalledWith({
+      where: { fisicaId: 10, alunoId: { in: [7] } },
+      data: { grupoId: 50, entrouNoGrupoEm: expect.any(Date) as Date },
+    });
+  });
+
+  it('com multiturma, aceita alunos de turmas diferentes', async () => {
+    const { tx, deps } = transacao({
+      multiturma: true,
+      novosNoBanco: [novo(7, 'Ana'), novo(8, 'Daniel', { turmaId: 2 })],
+    });
+
+    await criarGrupoComoAdmin(deps, 1, 10, { alunos: [7, 8] });
+
+    expect(tx.grupo.create).toHaveBeenCalled();
+  });
+
+  it.each([
+    ['a Física não existe', { existe: false }, [7], NaoEncontrado],
+    ['os alunos passam do máximo', { maximoIntegrantes: 1 }, [7, 8], GrupoCheio],
+    ['um aluno não está inscrito', {}, [7, 8], NaoEncontrado],
+    ['um aluno já tem grupo', { novosNoBanco: [novo(7, 'Ana', { grupoId: 4 })] }, [7], JaEmGrupo],
+    [
+      'os alunos são de turmas diferentes (sem multiturma)',
+      { novosNoBanco: [novo(7, 'Ana'), novo(8, 'Daniel', { turmaId: 2 })] },
+      [7, 8],
+      TurmaDiferente,
+    ],
+    [
+      'a Física já tem todos os grupos',
+      { quantidadeGrupos: 2, numerosExistentes: [1, 2] },
+      [7],
+      LimiteDeGrupos,
+    ],
+  ] as const)('lança erro quando %s, sem criar nada', async (_caso, opcoes, alunos, Erro) => {
+    const { tx, deps } = transacao(opcoes);
+
+    await expect(criarGrupoComoAdmin(deps, 1, 10, { alunos: [...alunos] })).rejects.toBeInstanceOf(
+      Erro,
+    );
+    expect(tx.grupo.create).not.toHaveBeenCalled();
+    expect(tx.inscricao.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('turmas diferentes: o primeiro da lista define a turma, mesmo se o banco devolver fora de ordem', async () => {
+    const { deps } = transacao({
+      novosNoBanco: [novo(8, 'Daniel', { turmaId: 2 }), novo(7, 'Ana')],
+    });
+
+    await expect(criarGrupoComoAdmin(deps, 1, 10, { alunos: [7, 8] })).rejects.toThrow(
+      'Daniel é de outra turma',
+    );
   });
 });

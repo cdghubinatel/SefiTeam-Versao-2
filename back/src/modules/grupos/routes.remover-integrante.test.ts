@@ -6,7 +6,6 @@ import type { Usuario } from '../../generated/prisma/client.js';
 import {
   criarAluno,
   criarCenarioDeGrupos,
-  criarEdicao,
   criarFisica,
   criarGrupo,
   criarUsuario,
@@ -20,7 +19,7 @@ import type { grupoSchema, remocaoDeIntegranteSchema } from './schemas.js';
 type Remocao = z.infer<typeof remocaoDeIntegranteSchema>;
 type Grupo = z.infer<typeof grupoSchema>;
 
-describe('DELETE /grupos/:grupoId/integrantes/:alunoId', () => {
+describe('DELETE /admin/grupos/:grupoId/integrantes/:alunoId', () => {
   let app: FastifyInstance;
 
   beforeAll(async () => {
@@ -39,7 +38,7 @@ describe('DELETE /grupos/:grupoId/integrantes/:alunoId', () => {
   function remover(grupoId: number | string, alunoId: number | string, usuario?: Usuario) {
     return requisicaoComo(
       app,
-      { method: 'DELETE', url: `/grupos/${grupoId}/integrantes/${alunoId}` },
+      { method: 'DELETE', url: `/admin/grupos/${grupoId}/integrantes/${alunoId}` },
       usuario,
     );
   }
