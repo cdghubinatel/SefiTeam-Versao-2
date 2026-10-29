@@ -6,6 +6,11 @@ O que a API já faz (ou vai fazer), mas ainda não está desenhado no [Figma](ht
 
 - [ ] **Tela de login**: os campos são **Login** (curso + matrícula, ex.: `GES589`) e **Senha** (o primeiro nome, ex.: `maria`), sem diferenciar maiúsculas nem acentos. Vale um texto de ajuda com esse formato, já que o aluno não recebe a senha. Ver [autenticacao.md](autenticacao.md).
 
+## Edições (admin)
+
+- [ ] **Escolher a edição**: o admin altera grupos de **qualquer edição** (inclusive as antigas, para ajustar alunos depois do prazo), mas todas as telas mostram só "Edição 2026/1" e não há onde escolher outra. Definir se haverá um seletor de edição (ex.: no subtítulo ou no header) ou se as telas ficam só na última edição que está ou já foi ativa.
+- [ ] **Dashboard do admin, card de cada Física** (`Dashboard/Admin/Ativo`): o "14/20" com barra de progresso não diz o que conta (alunos com grupo / inscritos? grupos formados / quantidade de grupos?). Definir e escrever o rótulo no card (ex.: "14/20 alunos com grupo").
+
 ## Físicas
 
 - [ ] **Código da Física**: é o nome da aba da planilha, como está (`Fis1`, `Fis2`...), não `F01`. As telas que mostram "F01-A" passam a mostrar "Fis1-A" (código da Física + turma).
@@ -28,7 +33,8 @@ Regras em [grupos.md](grupos.md).
 - [ ] **"Montar Grupo" para quem já tem grupo**: a aba "Entrar em um grupo" não se aplica (a API responde `409 JA_EM_GRUPO`). A tela deve mostrar o grupo do aluno e a ação de adicionar colegas, ou o front não deve levar o aluno até ela.
 - [ ] **Criar grupo: mínimo de colegas.** O grupo já nasce formado: o botão "Criar grupo" deve ficar desabilitado até quem cria + selecionados atingir o mínimo da Física (ex.: "1/2 selecionados — selecione mais 1 colega"). O contador "3/5 selecionados" do Figma já vai nessa direção; falta o estado desabilitado e a mensagem. Se a API responder `409 GRUPO_INCOMPLETO`, mostrar a mensagem dela.
 - [ ] **Admin: erros ao adicionar alunos a um grupo**: o modal "Adicionar Aluno no Grupo" (`Admin/ListaGrupos`) já existe e bate com a API (`POST /grupos/:grupoId/integrantes`). Como o admin também respeita o máximo e a turma, o modal precisa de um lugar para a mensagem de `409` (`GRUPO_CHEIO`, `TURMA_DIFERENTE`, `JA_EM_GRUPO`), e o "Confirmar" deveria ficar desabilitado quando a seleção passa das vagas (o contador "4/5 Integrantes" já ajuda).
-- [ ] **Admin: confirmar antes de remover um integrante**: a lixeira de cada integrante (`Admin/ListaGrupos`) não tem modal de confirmação, e a API remove na hora (`DELETE /grupos/:grupoId/integrantes/:alunoId`). Sugestão: um modal como o "Confirmar Deletar o Aluno?", avisando quando o aluno é o último integrante, porque aí o grupo é apagado junto.
+- [ ] **Admin: opções do filtro "Status de grupo"** (`Admin/ListaGrupos`): o dropdown só mostra "Todos". A API aceita **Formado** e **Não formado** (`status=formado` / `nao-formado` em `GET /admin/grupos`), os mesmos textos da coluna "Status do grupo" da ListaAlunos.
+- [ ] **Admin: confirmar antes de remover um integrante**: a lixeira de cada integrante (`Admin/ListaGrupos`) não tem modal de confirmação, e a API remove na hora (`DELETE /admin/grupos/:grupoId/integrantes/:alunoId`). Sugestão: um modal como o "Confirmar Deletar o Aluno?", avisando quando o aluno é o último integrante, porque aí o grupo é apagado junto.
 - [ ] **Busca de colegas**: o placeholder "Buscar por nome ou matrícula" está certo; vale indicar que a busca ignora acentos e maiúsculas (ex.: "joao" encontra "João").
 
 ## Alunos (admin)
