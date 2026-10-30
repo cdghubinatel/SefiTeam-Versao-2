@@ -8,8 +8,26 @@ O que a API já faz (ou vai fazer), mas ainda não está desenhado no [Figma](ht
 
 ## Edições (admin)
 
-- [ ] **Escolher a edição**: o admin altera grupos de **qualquer edição** (inclusive as antigas, para ajustar alunos depois do prazo), mas todas as telas mostram só "Edição 2026/1" e não há onde escolher outra. Definir se haverá um seletor de edição (ex.: no subtítulo ou no header) ou se as telas ficam só na última edição que está ou já foi ativa.
-- [ ] **Dashboard do admin, card de cada Física** (`Dashboard/Admin/Ativo`): o "14/20" com barra de progresso não diz o que conta (alunos com grupo / inscritos? grupos formados / quantidade de grupos?). Definir e escrever o rótulo no card (ex.: "14/20 alunos com grupo").
+### Criar edição (`Admin/CriarEdição`)
+
+O assistente tem quatro passos: Upload → Prazo → Físicas → Revisão. O **front lê a planilha** e guarda os passos; nada é gravado até "Criar edição", que envia tudo à API de uma vez.
+
+- [ ] **Upload: só `.xlsx`**: a tela diz "Formatos aceitos: .xlsx, .csv", mas cada aba da planilha é uma Física, e um CSV não tem abas. Trocar para "Formato aceito: .xlsx".
+- [ ] **Upload: erros de leitura**: o front acusa no Upload o que dá para ver no arquivo (não é `.xlsx`, aba com coluna faltando, célula vazia, nenhuma aba de Física), com a aba e a linha (ex.: "Fis1, linha 5: Matricula vazia."). Falta o estado de erro na tela (a lista, e o "Continuar" desabilitado) e o de carregando enquanto o arquivo é lido.
+- [ ] **Upload: o que foi lido**: depois do upload, mostrar um resumo para o professor conferir antes de seguir (ex.: "3 Físicas: Fis1 (40 alunos, turmas A e B), Fis2 (...)").
+- [ ] **Prazo: até que horas**: a tela tem só a data, e o prazo vale até **23:59 daquele dia** (horário de Brasília). Vale um texto de ajuda ("Os alunos podem montar grupos até 23:59 do dia escolhido"). A data precisa ser futura.
+- [ ] **Semestre da edição**: nenhum passo tem o campo. Ele é **calculado pela data limite** (até junho → `2026/1`; de julho em diante → `2026/2`). Mostrar o semestre na Revisão (ex.: "Edição 2026/1") e o erro quando ele já existir ("Já existe a edição 2026/1").
+- [ ] **Físicas: alunos e turmas da Física**: o card "Configuração — Física 1" não mostra quantos alunos e quais turmas a Física tem, e o professor precisa disso para escolher a quantidade de grupos e o máximo (ex.: "40 alunos · turmas A e B").
+- [ ] **Físicas: validação dos campos**: mínimo ≥ 1, máximo ≥ mínimo, grupos ≥ 1, e **todos os alunos precisam caber** (grupos × máximo ≥ alunos; ex.: "Fis1 tem 40 alunos, mas 5 grupos de até 6 cabem 30."). Falta onde mostrar essas mensagens, e o "Próxima Física" desabilitado.
+- [ ] **Revisão: edição ativa será finalizada**: criar uma edição nova **finaliza a edição ativa** (só há uma ativa por vez). A Revisão deve avisar antes ("A edição 2026/1 será finalizada e vira histórico"). Também cabe o total de alunos da edição.
+- [ ] **Revisão: erros ao criar**: algumas regras só a API confere, e só no "Criar edição": semestre já existente, aluno em duas turmas da mesma Física, o mesmo aluno com nomes diferentes em Físicas diferentes, configuração inválida. A API devolve todos de uma vez, identificados pela Física e pelo aluno (ex.: "Fis1: GES589 (Maria Souza) aparece nas turmas A e B."). Falta o lugar da lista na Revisão, com o caminho de volta ao Upload para trocar a planilha.
+
+### Gerenciar edições
+
+- [ ] **Lista de edições (histórico)**: não há tela com as edições anteriores. O admin altera grupos de **qualquer edição** (para ajustar alunos depois do prazo), mas todas as telas mostram só "Edição 2026/1". Falta uma tela ou um seletor (ex.: no subtítulo ou no header) com semestre, prazo e situação (ativa / finalizada), que leve aos grupos e alunos daquela edição. Sem escolher, as telas mostram a última edição criada.
+- [ ] **Edição não é editável depois de criada** (decisão desta etapa): prazo e configuração das Físicas só mudam dentro do assistente (os "Editar" da Revisão). Nenhuma tela deve oferecer editar a edição criada, nem trocar a planilha.
+- [ ] **Finalizar edição**: não existe ação separada; a edição ativa é finalizada quando a próxima é criada. Se o professor precisar finalizar sem criar outra, a tela e a regra precisam ser definidas.
+- [ ] **Dashboard do admin, card de cada Física** (`Dashboard/Admin/Ativo`): o "14/20" conta **grupos formados / quantidade de grupos** da Física. Escrever o rótulo no card (ex.: "14/20 grupos formados").
 
 ## Físicas
 

@@ -101,26 +101,27 @@ Todos os erros da API seguem o mesmo formato:
 
 `codigo` é estável e serve para o front decidir o que fazer. `mensagem` pode ser exibida ao usuário.
 
-| Status | `codigo`                | Quando                                                                                | Front-end                              |
-| ------ | ----------------------- | ------------------------------------------------------------------------------------- | -------------------------------------- |
-| 401    | `CREDENCIAIS_INVALIDAS` | Login ou senha errados                                                                | Mostra o erro na tela de login         |
-| 401    | `TOKEN_AUSENTE`         | Rota protegida sem header `Authorization`                                             | Apaga o token e redireciona a `/login` |
-| 401    | `TOKEN_INVALIDO`        | Token adulterado, expirado, revogado (logout) ou usuário inexistente                  | Apaga o token e redireciona a `/login` |
-| 403    | `SEM_PERMISSAO`         | Usuário autenticado sem o papel exigido pela rota                                     | Tela "sem acesso" (**não** desloga)    |
-| 429    | `MUITAS_TENTATIVAS`     | Rate limit do login excedido                                                          | Pede para aguardar e tentar de novo    |
-| 400    | `VALIDACAO`             | Corpo/parâmetros inválidos (lista em `detalhes`), pelo schema ou por regra do service | Mostra o erro no campo indicado        |
-| 4xx    | `REQUISICAO_INVALIDA`   | Requisição malformada (ex.: JSON quebrado)                                            | Mensagem genérica de erro              |
-| 404    | `NAO_ENCONTRADO`        | Rota inexistente, ou recurso inexistente (ex.: dúvida apagada)                        | Mostra a mensagem e recarrega a lista  |
-| 409    | `ORDEM_DESATUALIZADA`   | Reordenar dúvidas com uma lista que não bate com a do banco                           | Avisa e recarrega a lista              |
-| 409    | `JA_EM_GRUPO`           | O aluno (ou um colega escolhido) já tem grupo nesta Física ([grupos.md](grupos.md))   | Mostra a mensagem / o grupo dele       |
-| 409    | `PRAZO_ENCERRADO`       | Ação do aluno em grupos depois da data limite da edição                               | Mostra a mensagem; bloqueia as ações   |
-| 409    | `GRUPO_CHEIO`           | O grupo passaria do máximo de integrantes                                             | Mostra a mensagem                      |
-| 409    | `GRUPO_INCOMPLETO`      | Criar grupo abaixo do mínimo de integrantes (todo grupo nasce formado)                | Pede para selecionar mais colegas      |
-| 409    | `LIMITE_DE_GRUPOS`      | A Física já tem a quantidade máxima de grupos                                         | Mostra a mensagem                      |
-| 409    | `TURMA_DIFERENTE`       | Sem multiturma, aluno de outra turma no grupo                                         | Mostra a mensagem                      |
-| 500    | `ERRO_INTERNO`          | Erro inesperado (detalhes só no log do servidor)                                      | Mensagem genérica de erro              |
+| Status | `codigo`                | Quando                                                                                           | Front-end                              |
+| ------ | ----------------------- | ------------------------------------------------------------------------------------------------ | -------------------------------------- |
+| 401    | `CREDENCIAIS_INVALIDAS` | Login ou senha errados                                                                           | Mostra o erro na tela de login         |
+| 401    | `TOKEN_AUSENTE`         | Rota protegida sem header `Authorization`                                                        | Apaga o token e redireciona a `/login` |
+| 401    | `TOKEN_INVALIDO`        | Token adulterado, expirado, revogado (logout) ou usuário inexistente                             | Apaga o token e redireciona a `/login` |
+| 403    | `SEM_PERMISSAO`         | Usuário autenticado sem o papel exigido pela rota                                                | Tela "sem acesso" (**não** desloga)    |
+| 429    | `MUITAS_TENTATIVAS`     | Rate limit do login excedido                                                                     | Pede para aguardar e tentar de novo    |
+| 400    | `VALIDACAO`             | Corpo/parâmetros inválidos (lista em `detalhes`), pelo schema ou por regra do service            | Mostra o erro no campo indicado        |
+| 4xx    | `REQUISICAO_INVALIDA`   | Requisição malformada (ex.: JSON quebrado)                                                       | Mensagem genérica de erro              |
+| 404    | `NAO_ENCONTRADO`        | Rota inexistente, ou recurso inexistente (ex.: dúvida apagada)                                   | Mostra a mensagem e recarrega a lista  |
+| 409    | `ORDEM_DESATUALIZADA`   | Reordenar dúvidas com uma lista que não bate com a do banco                                      | Avisa e recarrega a lista              |
+| 409    | `JA_EM_GRUPO`           | O aluno (ou um colega escolhido) já tem grupo nesta Física ([grupos.md](grupos.md))              | Mostra a mensagem / o grupo dele       |
+| 409    | `PRAZO_ENCERRADO`       | Ação do aluno em grupos depois da data limite da edição                                          | Mostra a mensagem; bloqueia as ações   |
+| 409    | `GRUPO_CHEIO`           | O grupo passaria do máximo de integrantes                                                        | Mostra a mensagem                      |
+| 409    | `GRUPO_INCOMPLETO`      | Criar grupo abaixo do mínimo de integrantes (todo grupo nasce formado)                           | Pede para selecionar mais colegas      |
+| 409    | `LIMITE_DE_GRUPOS`      | A Física já tem a quantidade máxima de grupos                                                    | Mostra a mensagem                      |
+| 409    | `TURMA_DIFERENTE`       | Sem multiturma, aluno de outra turma no grupo                                                    | Mostra a mensagem                      |
+| 409    | `SEMESTRE_EXISTENTE`    | Criar uma edição cujo semestre (calculado pela data limite) já existe ([edicoes.md](edicoes.md)) | Mostra a mensagem na Revisão           |
+| 500    | `ERRO_INTERNO`          | Erro inesperado (detalhes só no log do servidor)                                                 | Mensagem genérica de erro              |
 
-Em `VALIDACAO`, `detalhes` traz `[{ "campo": "login", "mensagem": "..." }]`. As mensagens de `detalhes` saem em **português** (tradução pt-BR do próprio Zod, configurada em `back/src/config/zod.ts` com `z.config(z.locales.ptBR())`), por exemplo "Pequeno demais: esperava que o texto tivesse >= 1 caracteres". O front pode mostrá-las direto no campo; os códigos (`codigo`) não mudam.
+Em `VALIDACAO`, `detalhes` traz `[{ "campo": "login", "mensagem": "..." }]` (na criação da edição, `campo` é o código da Física, ex.: `Fis1`, e vêm todos os problemas da planilha de uma vez). As mensagens de `detalhes` saem em **português** (tradução pt-BR do próprio Zod, configurada em `back/src/config/zod.ts` com `z.config(z.locales.ptBR())`), por exemplo "Pequeno demais: esperava que o texto tivesse >= 1 caracteres". O front pode mostrá-las direto no campo; os códigos (`codigo`) não mudam.
 
 A mensagem de `CREDENCIAIS_INVALIDAS` é sempre genérica ("Login ou senha inválidos."). Ela não revela se o login está cadastrado.
 
@@ -150,7 +151,8 @@ Para o tempo de resposta não revelar se um login está cadastrado, o login inex
 - Login: **curso + matrícula** (ex.: `GES589`), as colunas Curso e Matricula da planilha. Gerado por `loginDoAluno({ curso, matricula })` (`back/src/modules/auth/service.ts`). Como `(curso, matricula)` é único, o login também é.
 - Senha: a **primeira palavra do nome** (coluna Aluno), separada por espaço: "Maria Clara Souza" → `maria`. Gerada por `senhaDoAluno({ nome })` quando o aluno é cadastrado.
 - A senha do aluno **não diferencia maiúsculas nem acentos**: `joao` = `João` = `JOAO`. O hash é gravado sem acentos e em maiúsculas e, no login de um aluno, o que foi digitado é convertido do mesmo jeito antes de comparar. Isso evita erros de teclado no celular. Digitar o nome completo não funciona: a senha é só a primeira palavra.
-- Como o aluno é reaproveitado entre edições, o login continua o mesmo de um semestre para o outro. Se o nome mudar na planilha de uma edição nova, a senha muda junto.
+- Como o aluno é reaproveitado entre edições, o login continua o mesmo de um semestre para o outro. Se o nome mudar na planilha de uma edição nova, a senha muda junto. A sessão aberta continua valendo (o `token_versao` não muda).
+- O hash da senha do aluno usa um **custo baixo do argon2** (`m=4096, t=1, p=1`, em `hashDaSenhaDoAluno`), e não o padrão. A senha não é secreta, então o custo alto não protege nada, e ele tornaria lenta a criação da edição, que cadastra centenas de alunos numa requisição (~100 ms por hash no padrão, ~2 ms no custo baixo). O login não muda: o `verify` lê os parâmetros guardados no próprio hash. Alunos com o mesmo primeiro nome recebem o mesmo hash, calculado uma vez. Efeito colateral aceito: o tempo de resposta do login de um aluno é menor que o de um login inexistente (que compara com o hash falso, de custo padrão), então dá para saber se um login de aluno existe, o que já se sabe pela regra do login.
 
 #### Sem segurança de propósito
 
