@@ -1,13 +1,13 @@
 /**
- * Dados de demonstração para testar os grupos no Swagger enquanto o upload da planilha não existe.
+ * Dados de demonstração para testar os grupos no Swagger sem montar uma planilha
+ * (`POST /admin/edicoes`), com um grupo já formado.
  * Só para desenvolvimento: recria a edição "DEMO" (ativa) e cadastra alunos de exemplo.
  * Uso: npm run db:seed:demo
  */
 import '../src/config/zod.js';
-import argon2 from 'argon2';
 import { z } from 'zod';
 import { criarPrismaClient } from '../src/lib/prisma.js';
-import { loginDoAluno, senhaDoAluno } from '../src/modules/auth/service.js';
+import { hashDaSenhaDoAluno, loginDoAluno, senhaDoAluno } from '../src/modules/auth/service.js';
 
 const SEMESTRE = 'DEMO';
 const TRINTA_DIAS = 30 * 24 * 60 * 60 * 1000;
@@ -44,7 +44,9 @@ async function main() {
 
   const prisma = criarPrismaClient(env.DATABASE_URL);
   try {
-    const hashes = await Promise.all(alunos.map((aluno) => argon2.hash(senhaDoAluno(aluno))));
+    const hashes = await Promise.all(
+      alunos.map((aluno) => hashDaSenhaDoAluno(senhaDoAluno(aluno))),
+    );
 
     await prisma.$transaction(async (tx) => {
       const outraAtiva = await tx.edicao.findFirst({

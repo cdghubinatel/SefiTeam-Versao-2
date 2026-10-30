@@ -4,6 +4,7 @@ import { CredenciaisInvalidas } from '../../shared/errors/app-error.js';
 import {
   autenticar,
   encerrarSessoes,
+  hashDaSenhaDoAluno,
   loginDoAluno,
   normalizarLogin,
   senhaDoAluno,
@@ -40,6 +41,18 @@ describe('senhaDoAluno', () => {
     ['Ana-Luísa Prado', 'ANA-LUISA'],
   ])('usa só a primeira palavra do nome, sem acentos e em maiúsculas (%j)', (nome, senha) => {
     expect(senhaDoAluno({ nome })).toBe(senha);
+  });
+});
+
+describe('hashDaSenhaDoAluno', () => {
+  it('gera um argon2id de custo baixo que confere com a senha', async () => {
+    const hash = await hashDaSenhaDoAluno('MARIA');
+
+    const [, algoritmo, , parametros] = hash.split('$');
+    expect(algoritmo).toBe('argon2id');
+    expect(parametros?.split(',').sort()).toEqual(['m=4096', 'p=1', 't=1']);
+    expect(await argon2.verify(hash, 'MARIA')).toBe(true);
+    expect(await argon2.verify(hash, 'JOAO')).toBe(false);
   });
 });
 

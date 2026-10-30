@@ -11,6 +11,7 @@ import { z } from 'zod';
 import { env } from './config/env.js';
 import { authRoutes } from './modules/auth/routes.js';
 import { duvidasRoutes } from './modules/duvidas/routes.js';
+import { edicoesRoutes } from './modules/edicoes/routes.js';
 import { gruposRoutes } from './modules/grupos/routes.js';
 import auth from './plugins/auth.js';
 import prisma from './plugins/prisma.js';
@@ -67,6 +68,7 @@ export async function buildApp(opcoes: FastifyServerOptions = {}) {
   await app.register(authRoutes, { prefix: '/auth' });
   await app.register(duvidasRoutes, { prefix: '/duvidas' });
   await app.register(gruposRoutes);
+  await app.register(edicoesRoutes, { prefix: '/admin/edicoes' });
 
   return app;
 }

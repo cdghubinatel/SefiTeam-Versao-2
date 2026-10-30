@@ -39,6 +39,7 @@ O professor (admin) cria uma **edição** da feira e faz upload de uma planilha 
 │   ├── modelo-banco.md  # Modelo de dados e regras
 │   ├── autenticacao.md  # Login, token e permissões
 │   ├── duvidas-frequentes.md  # Rotas e regras das dúvidas frequentes
+│   ├── edicoes.md       # Criar a edição a partir da planilha
 │   ├── grupos.md        # Rotas e regras dos grupos
 │   ├── pendencias-design.md  # O que falta desenhar no Figma
 │   └── roadmap.md       # O que está pronto e próximos passos
@@ -70,6 +71,7 @@ cd front
 - [Modelo do banco de dados](docs/modelo-banco.md)
 - [Autenticação e autorização](docs/autenticacao.md)
 - [Dúvidas frequentes](docs/duvidas-frequentes.md)
+- [Edições](docs/edicoes.md)
 - [Grupos](docs/grupos.md)
 - [Pendências de design](docs/pendencias-design.md)
 - [Roadmap](docs/roadmap.md)
