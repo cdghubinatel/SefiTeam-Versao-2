@@ -41,6 +41,19 @@ export function senhaDoAluno({ nome }: { nome: string }) {
   return normalizarSenhaDoAluno(primeiraPalavra);
 }
 
+/**
+ * Custo do argon2 para a senha do aluno, bem menor que o padrão: a senha é o primeiro nome
+ * (não é secreta), então o custo alto não protege nada e tornaria lenta a criação da edição,
+ * que cadastra centenas de alunos numa requisição (~100 ms por hash no padrão, ~2 ms aqui).
+ * O `verify` lê os parâmetros de dentro do hash, então o login não muda.
+ */
+const CUSTO_DA_SENHA_DO_ALUNO = { memoryCost: 4096, timeCost: 1, parallelism: 1 };
+
+/** Hash da senha do aluno (a primeira palavra do nome, normalizada). */
+export function hashDaSenhaDoAluno(senha: string) {
+  return argon2.hash(senha, CUSTO_DA_SENHA_DO_ALUNO);
+}
+
 export async function autenticar(
   { prisma }: Deps,
   { login, senha }: LoginBody,
