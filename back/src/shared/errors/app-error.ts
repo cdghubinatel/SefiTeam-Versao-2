@@ -19,10 +19,17 @@ export class AppError extends Error {
 /**
  * Dado inválido que só o service consegue checar (ex.: depende do usuário logado).
  * Mesmo formato do erro de validação do schema, com o campo em `detalhes`.
+ * Aceita um campo só ou a lista inteira (ex.: todos os erros da planilha de uma vez).
  */
 export class DadosInvalidos extends AppError {
-  constructor(campo: string, mensagem: string) {
-    super(400, 'VALIDACAO', 'Dados inválidos.', [{ campo, mensagem }]);
+  constructor(campo: string, mensagem: string);
+  constructor(detalhes: DetalheErro[]);
+  constructor(campoOuDetalhes: string | DetalheErro[], mensagem = '') {
+    const detalhes =
+      typeof campoOuDetalhes === 'string'
+        ? [{ campo: campoOuDetalhes, mensagem }]
+        : campoOuDetalhes;
+    super(400, 'VALIDACAO', 'Dados inválidos.', detalhes);
   }
 }
 
@@ -107,6 +114,13 @@ export class LimiteDeGrupos extends AppError {
 export class TurmaDiferente extends AppError {
   constructor(mensagem = 'Este grupo só aceita alunos da mesma turma.') {
     super(409, 'TURMA_DIFERENTE', mensagem);
+  }
+}
+
+/** Já existe uma edição com o semestre calculado pela data limite (o semestre é único). */
+export class SemestreExistente extends AppError {
+  constructor(semestre: string) {
+    super(409, 'SEMESTRE_EXISTENTE', `Já existe a edição ${semestre}.`);
   }
 }
 
