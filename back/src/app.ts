@@ -68,7 +68,7 @@ export async function buildApp(opcoes: FastifyServerOptions = {}) {
   await app.register(authRoutes, { prefix: '/auth' });
   await app.register(duvidasRoutes, { prefix: '/duvidas' });
   await app.register(gruposRoutes);
-  await app.register(edicoesRoutes, { prefix: '/admin/edicoes' });
+  await app.register(edicoesRoutes, { prefix: '/admin' });
 
   return app;
 }

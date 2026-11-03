@@ -28,6 +28,8 @@ O assistente tem quatro passos: Upload → Prazo → Físicas → Revisão. O **
 - [ ] **Edição não é editável depois de criada** (decisão desta etapa): prazo e configuração das Físicas só mudam dentro do assistente (os "Editar" da Revisão). Nenhuma tela deve oferecer editar a edição criada, nem trocar a planilha.
 - [ ] **Finalizar edição**: não existe ação separada; a edição ativa é finalizada quando a próxima é criada. Se o professor precisar finalizar sem criar outra, a tela e a regra precisam ser definidas.
 - [ ] **Dashboard do admin, card de cada Física** (`Dashboard/Admin/Ativo`): o "14/20" conta **grupos formados / quantidade de grupos** da Física. Escrever o rótulo no card (ex.: "14/20 grupos formados").
+- [ ] **Dashboard do admin, o que mais o card pode mostrar**: a API (`GET /admin/dashboard`) também devolve os grupos abaixo do mínimo, os alunos inscritos e os alunos sem grupo. Sugestão: uma linha "2 grupos abaixo do mínimo · 12 alunos sem grupo", que ajuda o professor a ver quem falta (e leva à ListaGrupos / ListaAlunos filtrada).
+- [ ] **Dashboard do admin, de qual edição**: o dashboard mostra a última edição criada. Com o seletor de edição (item "Lista de edições" acima), o mesmo dashboard mostra uma edição antiga; falta indicar na tela quando ela está finalizada (ex.: selo "Finalizada" ao lado de "Edição 2025/2").
 
 ## Físicas
 

@@ -234,4 +234,14 @@ Os testes de concorrência (blocos `concorrência` em `routes.criar-grupo.test.t
 
 ## Dados de demonstração
 
-Enquanto o upload da planilha não existe, `npm run db:seed:demo` (em `back/`) cria a edição ativa `DEMO` com duas Físicas (F01 sem multiturma e com 4 grupos; F02 com multiturma e 3 grupos; as duas com 2 a 3 integrantes), turmas A e B, 12 alunos e um grupo já formado na F01 (Ana e Bruno, com 1 vaga). Os logins e senhas aparecem no terminal. Só roda fora de produção e recusa rodar se outra edição estiver ativa. Rodar de novo recria a edição `DEMO`.
+Para testar sem montar uma planilha, `npm run db:seed:demo` (em `back/`) cria três edições com 40 alunos (logins `GES9001` a `GEC9040`, senha = primeiro nome), reaproveitados entre elas:
+
+- **`DEMO`** (ativa, prazo em 30 dias, a última criada):
+  - F01: sem multiturma, turmas A e B, 9 grupos de 2 a 3 integrantes. Tem um grupo formado com 1 vaga (Ana e Bruno, Grupo 1), um cheio, outro formado, um abaixo do mínimo criado pelo admin e 16 alunos sem grupo.
+  - F02: multiturma, 5 grupos de 3 a 4 integrantes. Quatro grupos já existem, então mais um e a Física responde `LIMITE_DE_GRUPOS`.
+  - F03: sem multiturma, turmas A, B e C, 4 grupos de 2 a 4 integrantes. Tem um grupo só.
+- **`DEMO 2025/1`** e **`DEMO 2025/2`** (finalizadas, prazo passado): quase todos em grupos formados, com um grupo abaixo do mínimo e poucos alunos sem grupo, como uma edição real depois do prazo.
+
+A tabela de logins, com a turma e o grupo de cada aluno na edição ativa, aparece no terminal. O seed só roda fora de produção e recusa rodar se uma edição que não é dele estiver ativa. Rodar de novo recria as três edições `DEMO` e devolve o nome e a senha dos alunos de exemplo.
+
+As edições do seed usam o prefixo `DEMO` de propósito: o semestre é único, e um nome como `2026/2` bloquearia criar a edição real pelo assistente (`409 SEMESTRE_EXISTENTE`).

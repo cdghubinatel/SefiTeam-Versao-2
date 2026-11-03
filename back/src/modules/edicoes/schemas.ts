@@ -73,7 +73,57 @@ export const edicaoCriadaSchema = z.object({
   edicaoFinalizada: z.object({ id: z.number().int(), semestre: z.string() }).nullable(),
 });
 
+const edicaoSchema = z.object({
+  id: z.number().int(),
+  semestre: z.string(),
+  dataLimite: z.iso.datetime(),
+  ativa: z.boolean(),
+});
+
+/** Edições da mais recente para a mais antiga (para o seletor e o histórico). */
+export const listaDeEdicoesSchema = z.array(
+  edicaoSchema.extend({
+    criadoEm: z.iso.datetime(),
+    /** Quantidade de Físicas da edição. */
+    fisicas: z.number().int(),
+    /** Alunos inscritos em pelo menos uma Física (quem está em duas conta uma vez). */
+    alunos: z.number().int(),
+  }),
+);
+
+export const dashboardQuerySchema = z.object({
+  /** Sem ele, a última edição criada (mesmo finalizada), como nas outras telas do admin. */
+  edicaoId: z.coerce.number().int().positive().optional(),
+});
+
+export const dashboardSchema = z.object({
+  /** Edição pedida (ou a última criada); `null` quando não existe nenhuma edição. */
+  edicao: edicaoSchema.nullable(),
+  /** Um card por Física, em ordem de código. */
+  fisicas: z.array(
+    z.object({
+      id: z.number().int(),
+      codigo: z.string(),
+      nome: z.string(),
+      quantidadeGrupos: z.number().int(),
+      minimoIntegrantes: z.number().int(),
+      maximoIntegrantes: z.number().int(),
+      multiturma: z.boolean(),
+      /** Grupos que atingiram o mínimo de integrantes (o "14" de "14/20 grupos formados"). */
+      gruposFormados: z.number().int(),
+      /** Grupos criados que ainda estão abaixo do mínimo. */
+      gruposNaoFormados: z.number().int(),
+      /** Alunos inscritos na Física. */
+      alunos: z.number().int(),
+      alunosSemGrupo: z.number().int(),
+    }),
+  ),
+});
+
 export type AlunoDaPlanilha = z.infer<typeof alunoDaPlanilhaSchema>;
 export type FisicaDaPlanilha = z.infer<typeof fisicaDaPlanilhaSchema>;
 export type CriarEdicaoBody = z.infer<typeof criarEdicaoBodySchema>;
 export type EdicaoCriada = z.infer<typeof edicaoCriadaSchema>;
+export type ListaDeEdicoes = z.infer<typeof listaDeEdicoesSchema>;
+export type DashboardQuery = z.infer<typeof dashboardQuerySchema>;
+export type Dashboard = z.infer<typeof dashboardSchema>;
