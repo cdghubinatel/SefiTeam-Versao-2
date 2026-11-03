@@ -1,8 +1,16 @@
 import type { PrismaClient } from '../../generated/prisma/client.js';
-import { DadosInvalidos, SemestreExistente } from '../../shared/errors/app-error.js';
+import { DadosInvalidos, NaoEncontrado, SemestreExistente } from '../../shared/errors/app-error.js';
 import { hashDaSenhaDoAluno, loginDoAluno, senhaDoAluno } from '../auth/service.js';
+import { estaFormado } from '../grupos/regras.js';
 import { nomeDaFisica, prazoDoDia, semestreDoDia, validarFisicas } from './regras.js';
-import type { AlunoDaPlanilha, CriarEdicaoBody, EdicaoCriada } from './schemas.js';
+import type {
+  AlunoDaPlanilha,
+  CriarEdicaoBody,
+  Dashboard,
+  DashboardQuery,
+  EdicaoCriada,
+  ListaDeEdicoes,
+} from './schemas.js';
 
 type Deps = { prisma: PrismaClient };
 
@@ -183,4 +191,101 @@ export async function criarEdicao(
     },
     { timeout: TEMPO_MAXIMO_DA_TRANSACAO },
   );
+}
+
+/**
+ * Lista de edições do admin (seletor e histórico), da mais recente para a mais antiga, com a
+ * quantidade de Físicas e de alunos. Sem paginação: é uma edição por semestre.
+ */
+export async function listarEdicoes({ prisma }: Deps): Promise<ListaDeEdicoes> {
+  const edicoes = await prisma.edicao.findMany({
+    select: {
+      id: true,
+      semestre: true,
+      dataLimite: true,
+      ativa: true,
+      criadoEm: true,
+      _count: { select: { fisicas: true } },
+    },
+    orderBy: [{ criadoEm: 'desc' }, { id: 'desc' }],
+  });
+
+  // O mesmo aluno em duas Físicas conta uma vez: uma consulta só, agrupada por edição.
+  const contagens = await prisma.$queryRaw<{ edicao_id: number; alunos: bigint }[]>`
+    SELECT f.edicao_id, COUNT(DISTINCT i.aluno_id) AS alunos
+    FROM inscricao i
+    JOIN fisica f ON f.id = i.fisica_id
+    GROUP BY f.edicao_id
+  `;
+  const alunosPorEdicao = new Map(
+    contagens.map((linha) => [linha.edicao_id, Number(linha.alunos)]),
+  );
+
+  return edicoes.map(({ _count, dataLimite, criadoEm, ...edicao }) => ({
+    ...edicao,
+    dataLimite: dataLimite.toISOString(),
+    criadoEm: criadoEm.toISOString(),
+    fisicas: _count.fisicas,
+    alunos: alunosPorEdicao.get(edicao.id) ?? 0,
+  }));
+}
+
+/**
+ * Dashboard do admin: um card por Física da edição, com grupos formados (atingiram o mínimo) e
+ * não formados, alunos e alunos sem grupo. Sem `edicaoId`, a última edição criada (mesmo
+ * finalizada), como na lista de grupos. Sem nenhuma edição, `edicao` vem `null`.
+ */
+export async function resumoDaEdicao(
+  { prisma }: Deps,
+  { edicaoId }: DashboardQuery,
+): Promise<Dashboard> {
+  const edicao = await prisma.edicao.findFirst({
+    where: edicaoId === undefined ? {} : { id: edicaoId },
+    select: { id: true, semestre: true, dataLimite: true, ativa: true },
+    orderBy: [{ criadoEm: 'desc' }, { id: 'desc' }],
+  });
+  if (!edicao) {
+    if (edicaoId !== undefined) {
+      throw new NaoEncontrado('Edição não encontrada.');
+    }
+    return { edicao: null, fisicas: [] };
+  }
+
+  const fisicas = await prisma.fisica.findMany({
+    where: { edicaoId: edicao.id },
+    select: {
+      id: true,
+      codigo: true,
+      nome: true,
+      quantidadeGrupos: true,
+      minimoIntegrantes: true,
+      maximoIntegrantes: true,
+      multiturma: true,
+      grupos: { select: { _count: { select: { integrantes: true } } } },
+      _count: { select: { inscricoes: true } },
+    },
+    orderBy: { codigo: 'asc' },
+  });
+  const semGrupo = await prisma.inscricao.groupBy({
+    by: ['fisicaId'],
+    where: { fisica: { edicaoId: edicao.id }, grupoId: null },
+    _count: { _all: true },
+  });
+  const semGrupoPorFisica = new Map(semGrupo.map((linha) => [linha.fisicaId, linha._count._all]));
+
+  return {
+    edicao: { ...edicao, dataLimite: edicao.dataLimite.toISOString() },
+    fisicas: fisicas.map(({ grupos, _count, ...fisica }) => {
+      const formados = grupos.filter((grupo) =>
+        estaFormado(grupo._count.integrantes, fisica.minimoIntegrantes),
+      ).length;
+      return {
+        ...fisica,
+        gruposFormados: formados,
+        gruposNaoFormados: grupos.length - formados,
+        alunos: _count.inscricoes,
+        alunosSemGrupo: semGrupoPorFisica.get(fisica.id) ?? 0,
+      };
+    }),
+  };
 }
