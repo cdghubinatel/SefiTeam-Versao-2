@@ -34,7 +34,7 @@ back/
 │   │   └── errors/         # AppError e error handler central
 │   └── modules/            # Um módulo por domínio
 │       ├── auth/           # Login, sessão
-│       ├── edicoes/        # Criação da edição, upload da planilha
+│       ├── edicoes/        # Criar edição (planilha lida pelo front), lista e dashboard do admin
 │       ├── fisicas/
 │       ├── alunos/
 │       ├── grupos/         # Criar, entrar, remover, exportar
@@ -80,21 +80,21 @@ Copie `.env.example` para `.env`. As variáveis são validadas ao iniciar (`src/
 
 ## Scripts
 
-| Script                 | Descrição                                                                                          |
-| ---------------------- | -------------------------------------------------------------------------------------------------- |
-| `npm run dev`          | Sobe a API em modo desenvolvimento (watch)                                                         |
-| `npm run build`        | Compila para JavaScript em `dist/`                                                                 |
-| `npm start`            | Roda a versão compilada                                                                            |
-| `npm run typecheck`    | Checa os tipos sem gerar arquivos                                                                  |
-| `npm run lint`         | ESLint com regras que usam os tipos (`lint:fix` corrige o que for possível)                        |
-| `npm run format`       | Formata com Prettier (`format:check` só confere)                                                   |
-| `npm test`             | Roda os testes (`test:watch`, `test:coverage`)                                                     |
-| `npm run db:generate`  | Gera o Prisma Client em `src/generated/`                                                           |
-| `npm run db:migrate`   | Cria/aplica migrations no banco local (dev)                                                        |
-| `npm run db:deploy`    | Aplica migrations pendentes (CI/produção)                                                          |
-| `npm run db:seed`      | Cria ou atualiza o admin                                                                           |
-| `npm run db:seed:demo` | Cria a edição ativa `DEMO` com Físicas, alunos e um grupo (só desenvolvimento; ver docs/grupos.md) |
-| `npm run db:studio`    | Abre o Prisma Studio                                                                               |
+| Script                 | Descrição                                                                                                      |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`          | Sobe a API em modo desenvolvimento (watch)                                                                     |
+| `npm run build`        | Compila para JavaScript em `dist/`                                                                             |
+| `npm start`            | Roda a versão compilada                                                                                        |
+| `npm run typecheck`    | Checa os tipos sem gerar arquivos                                                                              |
+| `npm run lint`         | ESLint com regras que usam os tipos (`lint:fix` corrige o que for possível)                                    |
+| `npm run format`       | Formata com Prettier (`format:check` só confere)                                                               |
+| `npm test`             | Roda os testes (`test:watch`, `test:coverage`)                                                                 |
+| `npm run db:generate`  | Gera o Prisma Client em `src/generated/`                                                                       |
+| `npm run db:migrate`   | Cria/aplica migrations no banco local (dev)                                                                    |
+| `npm run db:deploy`    | Aplica migrations pendentes (CI/produção)                                                                      |
+| `npm run db:seed`      | Cria ou atualiza o admin                                                                                       |
+| `npm run db:seed:demo` | Cria a edição ativa `DEMO` e duas finalizadas, com 40 alunos e grupos (só desenvolvimento; ver docs/grupos.md) |
+| `npm run db:studio`    | Abre o Prisma Studio                                                                                           |
 
 ## Banco de dados
 

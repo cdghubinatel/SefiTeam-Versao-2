@@ -44,7 +44,7 @@ npm test                 # Vitest (integração usa o banco sefiteam_test)
 npm run typecheck && npm run lint && npm run format:check
 npm run db:migrate       # nova migration / aplicar no banco local
 npm run db:seed          # admin a partir de ADMIN_LOGIN / ADMIN_SENHA
-npm run db:seed:demo     # edição ativa DEMO com Físicas, alunos e grupo (teste manual de grupos)
+npm run db:seed:demo     # edições DEMO (ativa) e DEMO 2025/1, 2025/2 (finalizadas), 40 alunos e grupos (teste manual)
 ```
 
 Convenções:

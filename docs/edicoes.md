@@ -4,7 +4,7 @@ O admin cria uma edição por semestre a partir da planilha de alunos: uma aba p
 
 Código em `back/src/modules/edicoes/`. Tabelas `edicao`, `fisica`, `turma`, `usuario` e `inscricao` ([modelo-banco.md](modelo-banco.md)).
 
-> Pronto no back-end: criar a edição (`POST /admin/edicoes`). Faltam as leituras do admin, lista de edições e dashboard ([roadmap](roadmap.md#próximos-passos-back-end)). O que falta no Figma está em [pendencias-design.md](pendencias-design.md#edições-admin).
+> Pronto no back-end: criar a edição (`POST /admin/edicoes`), a lista de edições (`GET /admin/edicoes`) e o dashboard do admin (`GET /admin/dashboard`). O que falta no Figma está em [pendencias-design.md](pendencias-design.md#edições-admin).
 
 ## Como funciona o assistente
 
@@ -43,9 +43,11 @@ Decisão do grupo (2026-10-29): sem upload de arquivo no back (sem multipart nem
 
 ## Rotas
 
-| Método | Rota             | Acesso | Resposta                                 |
-| ------ | ---------------- | ------ | ---------------------------------------- |
-| POST   | `/admin/edicoes` | ADMIN  | `201` edição criada; `400`; `409`; `413` |
+| Método | Rota               | Acesso | Resposta                                 |
+| ------ | ------------------ | ------ | ---------------------------------------- |
+| POST   | `/admin/edicoes`   | ADMIN  | `201` edição criada; `400`; `409`; `413` |
+| GET    | `/admin/edicoes`   | ADMIN  | `200` lista de edições                   |
+| GET    | `/admin/dashboard` | ADMIN  | `200` cards das Físicas; `400`; `404`    |
 
 ### `POST /admin/edicoes`
 
@@ -128,6 +130,61 @@ Na ordem em que são checados:
 6. `413 REQUISICAO_INVALIDA`: corpo acima de 5 MB.
 
 Em qualquer erro, nada é gravado.
+
+### `GET /admin/edicoes`
+
+Todas as edições, da mais recente para a mais antiga, para o seletor de edição e o histórico. Sem paginação (é uma edição por semestre). Sem nenhuma edição, `[]`.
+
+```json
+[
+  {
+    "id": 55,
+    "semestre": "2026/2",
+    "dataLimite": "2026-11-20T02:59:59.999Z",
+    "ativa": true,
+    "criadoEm": "2026-10-30T12:00:00.000Z",
+    "fisicas": 3,
+    "alunos": 120
+  }
+]
+```
+
+`alunos` conta pessoas: o aluno inscrito em duas Físicas da edição conta uma vez (uma consulta só, com `COUNT(DISTINCT aluno_id)` por edição).
+
+### `GET /admin/dashboard`
+
+Os cards do `Dashboard/Admin`. Query opcional `edicaoId`; sem ela, a **última edição criada**, mesmo finalizada (a mesma regra do `GET /admin/grupos`). Como uma edição só é finalizada quando outra é criada, na prática é a ativa. Sem nenhuma edição (tela `Vazio`): `{ "edicao": null, "fisicas": [] }`. `edicaoId` inexistente: `404 NAO_ENCONTRADO`.
+
+```json
+{
+  "edicao": {
+    "id": 55,
+    "semestre": "2026/2",
+    "dataLimite": "2026-11-20T02:59:59.999Z",
+    "ativa": true
+  },
+  "fisicas": [
+    {
+      "id": 101,
+      "codigo": "Fis1",
+      "nome": "Física 1",
+      "quantidadeGrupos": 20,
+      "minimoIntegrantes": 3,
+      "maximoIntegrantes": 5,
+      "multiturma": false,
+      "gruposFormados": 14,
+      "gruposNaoFormados": 2,
+      "alunos": 90,
+      "alunosSemGrupo": 12
+    }
+  ]
+}
+```
+
+- Físicas em ordem de código.
+- **Formado** = atingiu o mínimo de integrantes da Física (a mesma regra da lista de grupos, `estaFormado` em `grupos/regras.ts`). O card mostra `gruposFormados`/`quantidadeGrupos` ("14/20 grupos formados").
+- `gruposNaoFormados`: grupos criados abaixo do mínimo (o admin pode criar grupos assim, e remover integrantes deixa o grupo abaixo).
+- Vagas de grupo ainda livres = `quantidadeGrupos - gruposFormados - gruposNaoFormados` (o front calcula, se quiser mostrar).
 
 ## Desempenho
 
