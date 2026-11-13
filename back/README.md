@@ -24,6 +24,8 @@ back/
 ├── prisma/
 │   ├── schema.prisma       # Modelo (ver docs/modelo-banco.md)
 │   └── migrations/
+├── scripts/
+│   └── simular-uso.ts      # npm run simular: simula alunos e admin usando a API
 ├── src/
 │   ├── server.ts           # Sobe o servidor (listen)
 │   ├── app.ts              # buildApp(): monta o Fastify (usado também nos testes)
@@ -36,8 +38,8 @@ back/
 │       ├── auth/           # Login, sessão
 │       ├── edicoes/        # Criar edição (planilha lida pelo front), lista e dashboard do admin
 │       ├── fisicas/
-│       ├── alunos/
-│       ├── grupos/         # Criar, entrar, remover, exportar
+│       ├── alunos/         # Alunos do admin: lista, adicionar, editar, tirar da Física
+│       ├── grupos/         # Criar, entrar, adicionar e remover integrantes
 │       └── duvidas/        # Dúvidas Frequentes
 └── .env.example
 ```
@@ -80,21 +82,38 @@ Copie `.env.example` para `.env`. As variáveis são validadas ao iniciar (`src/
 
 ## Scripts
 
-| Script                 | Descrição                                                                                                      |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `npm run dev`          | Sobe a API em modo desenvolvimento (watch)                                                                     |
-| `npm run build`        | Compila para JavaScript em `dist/`                                                                             |
-| `npm start`            | Roda a versão compilada                                                                                        |
-| `npm run typecheck`    | Checa os tipos sem gerar arquivos                                                                              |
-| `npm run lint`         | ESLint com regras que usam os tipos (`lint:fix` corrige o que for possível)                                    |
-| `npm run format`       | Formata com Prettier (`format:check` só confere)                                                               |
-| `npm test`             | Roda os testes (`test:watch`, `test:coverage`)                                                                 |
-| `npm run db:generate`  | Gera o Prisma Client em `src/generated/`                                                                       |
-| `npm run db:migrate`   | Cria/aplica migrations no banco local (dev)                                                                    |
-| `npm run db:deploy`    | Aplica migrations pendentes (CI/produção)                                                                      |
-| `npm run db:seed`      | Cria ou atualiza o admin                                                                                       |
-| `npm run db:seed:demo` | Cria a edição ativa `DEMO` e duas finalizadas, com 40 alunos e grupos (só desenvolvimento; ver docs/grupos.md) |
-| `npm run db:studio`    | Abre o Prisma Studio                                                                                           |
+| Script                 | Descrição                                                                                                                   |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`          | Sobe a API em modo desenvolvimento (watch)                                                                                  |
+| `npm run build`        | Compila para JavaScript em `dist/`                                                                                          |
+| `npm start`            | Roda a versão compilada                                                                                                     |
+| `npm run typecheck`    | Checa os tipos sem gerar arquivos                                                                                           |
+| `npm run lint`         | ESLint com regras que usam os tipos (`lint:fix` corrige o que for possível)                                                 |
+| `npm run format`       | Formata com Prettier (`format:check` só confere)                                                                            |
+| `npm test`             | Roda os testes (`test:watch`, `test:coverage`)                                                                              |
+| `npm run db:generate`  | Gera o Prisma Client em `src/generated/`                                                                                    |
+| `npm run db:migrate`   | Cria/aplica migrations no banco local (dev)                                                                                 |
+| `npm run db:deploy`    | Aplica migrations pendentes (CI/produção)                                                                                   |
+| `npm run db:seed`      | Cria ou atualiza o admin                                                                                                    |
+| `npm run db:seed:demo` | Cria a edição ativa `DEMO` e duas finalizadas, com 40 alunos e grupos (só desenvolvimento; ver docs/grupos.md)              |
+| `npm run simular`      | Simula o uso completo da API (alunos e admin) contra a API de dev no ar; recria o seed DEMO no início e no fim (ver abaixo) |
+| `npm run db:studio`    | Abre o Prisma Studio                                                                                                        |
+
+### Simulação de uso (`npm run simular`)
+
+Um teste manual automatizado: o script `scripts/simular-uso.ts` faz, pela API, o que alunos e admin fariam nas telas, em sequência, e confere cada resposta (86 passos, cerca de 10 s). Cobre login e sessão, dashboard do aluno, entrar e criar grupo, adicionar colegas, multiturma, logout, painel do admin (edições, dashboard, listas de grupos e de alunos), grupos montados pelo admin, adicionar, editar e tirar alunos, ajustes numa edição finalizada, dúvidas frequentes, prazo encerrado e criação de uma edição pela planilha.
+
+```bash
+docker compose up -d     # na raiz
+npm run dev              # em outro terminal
+npm run simular
+```
+
+- Usa o **banco de desenvolvimento**: recria o seed DEMO no início e no fim, e apaga o que criou (a edição `2099/1`, os alunos cadastrados e as dúvidas da simulação). Não roda em produção.
+- Outra URL: `SIMULAR_URL=http://127.0.0.1:3399 npm run simular` (ex.: a API compilada).
+- Falhas aparecem como `FALHA`, com a resposta da API, e o comando sai com código 1.
+- O login tem limite de 10 tentativas por minuto por login: a simulação faz no máximo três por aluno, então dá para rodar umas três vezes seguidas; depois, aguarde um minuto.
+- Não substitui os testes do Vitest: ele não entra no CI.
 
 ## Banco de dados
 

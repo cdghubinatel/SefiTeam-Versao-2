@@ -119,6 +119,10 @@ Todos os erros da API seguem o mesmo formato:
 | 409    | `LIMITE_DE_GRUPOS`      | A Física já tem a quantidade máxima de grupos                                                    | Mostra a mensagem                      |
 | 409    | `TURMA_DIFERENTE`       | Sem multiturma, aluno de outra turma no grupo                                                    | Mostra a mensagem                      |
 | 409    | `SEMESTRE_EXISTENTE`    | Criar uma edição cujo semestre (calculado pela data limite) já existe ([edicoes.md](edicoes.md)) | Mostra a mensagem na Revisão           |
+| 409    | `JA_INSCRITO`           | Adicionar um aluno a uma Física em que ele já está ([alunos.md](alunos.md))                      | Mostra a mensagem no modal             |
+| 409    | `FISICA_LOTADA`         | Adicionar um aluno a uma Física cheia (grupos × máximo já preenchidos)                           | Mostra a mensagem no modal             |
+| 409    | `ALUNO_EM_GRUPO`        | Trocar a turma de um aluno que está num grupo                                                    | Mostra a mensagem no modal             |
+| 409    | `LOGIN_EXISTENTE`       | Editar curso ou matrícula para o login de outro cadastro                                         | Mostra a mensagem no modal             |
 | 500    | `ERRO_INTERNO`          | Erro inesperado (detalhes só no log do servidor)                                                 | Mensagem genérica de erro              |
 
 Em `VALIDACAO`, `detalhes` traz `[{ "campo": "login", "mensagem": "..." }]` (na criação da edição, `campo` é o código da Física, ex.: `Fis1`, e vêm todos os problemas da planilha de uma vez). As mensagens de `detalhes` saem em **português** (tradução pt-BR do próprio Zod, configurada em `back/src/config/zod.ts` com `z.config(z.locales.ptBR())`), por exemplo "Pequeno demais: esperava que o texto tivesse >= 1 caracteres". O front pode mostrá-las direto no campo; os códigos (`codigo`) não mudam.

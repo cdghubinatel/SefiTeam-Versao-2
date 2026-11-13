@@ -26,7 +26,7 @@ O assistente tem quatro passos: Upload → Prazo → Físicas → Revisão. O **
 
 - [ ] **Lista de edições (histórico)**: não há tela com as edições anteriores. O admin altera grupos de **qualquer edição** (para ajustar alunos depois do prazo), mas todas as telas mostram só "Edição 2026/1". Falta uma tela ou um seletor (ex.: no subtítulo ou no header) com semestre, prazo e situação (ativa / finalizada), que leve aos grupos e alunos daquela edição. Sem escolher, as telas mostram a última edição criada.
 - [ ] **Edição não é editável depois de criada** (decisão desta etapa): prazo e configuração das Físicas só mudam dentro do assistente (os "Editar" da Revisão). Nenhuma tela deve oferecer editar a edição criada, nem trocar a planilha.
-- [ ] **Finalizar edição**: não existe ação separada; a edição ativa é finalizada quando a próxima é criada. Se o professor precisar finalizar sem criar outra, a tela e a regra precisam ser definidas.
+- [ ] **Finalizar edição**: não existe ação de finalizar, nem vai existir (decisão de 2026-11-13). A edição ativa é finalizada quando a próxima é criada; nenhuma tela deve oferecer "Finalizar edição".
 - [ ] **Dashboard do admin, card de cada Física** (`Dashboard/Admin/Ativo`): o "14/20" conta **grupos formados / quantidade de grupos** da Física. Escrever o rótulo no card (ex.: "14/20 grupos formados").
 - [ ] **Dashboard do admin, o que mais o card pode mostrar**: a API (`GET /admin/dashboard`) também devolve os grupos abaixo do mínimo, os alunos inscritos e os alunos sem grupo. Sugestão: uma linha "2 grupos abaixo do mínimo · 12 alunos sem grupo", que ajuda o professor a ver quem falta (e leva à ListaGrupos / ListaAlunos filtrada).
 - [ ] **Dashboard do admin, de qual edição**: o dashboard mostra a última edição criada. Com o seletor de edição (item "Lista de edições" acima), o mesmo dashboard mostra uma edição antiga; falta indicar na tela quando ela está finalizada (ex.: selo "Finalizada" ao lado de "Edição 2025/2").
@@ -59,4 +59,13 @@ Regras em [grupos.md](grupos.md).
 
 ## Alunos (admin)
 
+- [ ] **Status "Sem grupo"** (`Admin/ListaAlunos`): a coluna e o filtro "Status de grupo" têm só Formado e Não formado. A API separa três: **Formado** (grupo atingiu o mínimo), **Não formado** (grupo abaixo do mínimo) e **Sem grupo** (aluno sem grupo), para o professor achar quem falta alocar.
+- [ ] **Botões de coluna** (Curso, Turma, Física, Status do grupo): mostram ou escondem colunas da tabela. No print, "Status do grupo" aparece desmarcado com a coluna visível; falta o estado de coluna escondida.
+- [ ] **Edição mostrada na lista**: a tela mostra só a edição atual (a última criada, ativa ou não). Vale escrever o semestre no subtítulo (ex.: "Edição 2026/2").
+- [ ] **Modais "Adicionar Aluno" e "Editar Aluno", turma**: a turma precisa ser uma das turmas da Física escolhida (um dropdown, com as turmas que a lista já traz em `fisicas[].turmas`), não um texto livre.
+- [ ] **Modais, mensagens de erro**: falta onde mostrar os erros da API: "Este aluno já está nesta Física.", "A Física já tem 40 alunos...", "Tire o aluno do grupo antes de trocar a turma.", "Já existe um cadastro com o login GES589.".
+- [ ] **Modal "Editar Aluno", avisos**: mudar o nome muda a senha do aluno (a primeira palavra do nome), e mudar curso ou matrícula muda o login. Vale um aviso no modal. Também vale dizer que nome, curso e matrícula mudam em todas as Físicas do aluno, e a turma só nesta.
+- [ ] **Modal "Editar Aluno", turma de quem está em grupo**: com o aluno num grupo, o campo turma deveria vir desabilitado, com a explicação ("Tire o aluno do grupo para trocar a turma").
+- [ ] **Modal "Confirmar Deletar o Aluno?"**: o texto diz que o aluno "não estará mais presente nessa edição", mas a lixeira é da linha, então ele sai **só daquela Física** (nas outras continua). Ajustar o texto (ex.: "Tirar Maria Souza da Física 1?") e avisar quando ele é o último integrante do grupo, porque o grupo é apagado junto.
+- [ ] **Exportar Planilha de Grupos, dois formatos**: alunos (uma aba por Física, com grupo e status) e grupos (cada grupo com os integrantes, e os alunos sem grupo no fim). Falta como o professor escolhe o formato (ex.: dois botões ou um menu). Ver [alunos.md](alunos.md#exportar-as-planilhas-front).
 - [ ] **Campo e-mail nos modais "Adicionar Aluno" e "Editar Aluno"** (`Admin/ListaAlunos`): a planilha não traz e-mail e o sistema não usa e-mail (login = curso + matrícula). Remover o campo.

@@ -13,6 +13,8 @@ O que já está pronto e o que vem a seguir. Atualize este arquivo quando uma et
 
 O front-end só começa quando o back-end estiver finalizado. Ordem combinada:
 
+> Em 2026-11-12, as três etapas abaixo estão prontas: o back-end tem todas as rotas das telas do Figma. Fora do código, faltam as decisões de deploy ([Decisões em aberto](#decisões-em-aberto)). Finalizar uma edição sem criar outra **não será feito** (decisão de 2026-11-13): a edição ativa só é finalizada quando a próxima é criada. Para conferir a API de ponta a ponta, `npm run simular` (ver [back/README.md](../back/README.md)).
+
 1. **Grupos** (pronto no back-end, ver [grupos.md](grupos.md))
    - [x] Leitura do aluno: minhas Físicas (dashboard), grupos em que pode entrar, colegas disponíveis (busca sem acentos). Seed de demonstração (`npm run db:seed:demo`).
    - [x] Criar grupo (com colegas), com lock na Física e testes de concorrência. O grupo já nasce formado (`GRUPO_INCOMPLETO` abaixo do mínimo).
@@ -35,11 +37,11 @@ O front-end só começa quando o back-end estiver finalizado. Ordem combinada:
    - Alunos novos são cadastrados com `loginDoAluno({ curso, matricula })` e a senha `senhaDoAluno({ nome })`. Alunos já cadastrados em edições anteriores (mesmo curso + matrícula) são reaproveitados, atualizando o nome e a senha, sem deslogar.
    - A edição **não é editável depois de criada** nesta etapa (nem prazo, nem configuração, nem planilha).
    - Pendências de design do assistente e da gestão de edições em [pendencias-design.md](pendencias-design.md#edições-admin).
-3. **Alunos (admin)**, em branch própria: listagem completa de alunos (tela `Admin/ListaAlunos`, com busca e filtros por Física e status do grupo). A planejar, com as perguntas de negócio de cada ação (o Figma `Admin/ListaAlunos` já tem as telas):
-   - Adicionar um aluno à edição manualmente (matrícula, curso, nome, Física e turma), fora da planilha.
-   - Editar um aluno, inclusive a turma (e se ele já estiver num grupo sem multiturma?).
-   - Tirar um aluno da edição ("não estará mais presente nessa edição"; e se ele for o último integrante de um grupo?).
-   - Exportar a planilha de grupos (botão nas duas telas).
+3. **Alunos (admin)** (tela `Admin/ListaAlunos`, ver [alunos.md](alunos.md)), em quatro partes. A tela mostra só a edição atual (a última criada, ativa ou não), com uma linha por aluno em cada Física.
+   - [x] **3a. Lista de alunos** (`GET /admin/alunos`): busca sem acentos por nome ou matrícula, filtros por Física e por status (`formado`, `nao-formado`, `sem-grupo`), sem paginação. Traz o número do grupo, para o front exportar a planilha.
+   - [x] **3b. Adicionar e editar um aluno** (`POST /admin/fisicas/:fisicaId/alunos` e `PUT /admin/fisicas/:fisicaId/alunos/:alunoId`), fora da planilha, só na edição atual. Aluno já cadastrado (curso + matrícula) é reaproveitado, com nome e senha atualizados; turma só das existentes; a Física não passa da capacidade (grupos × máximo). Na edição, nome, curso e matrícula valem para o cadastro inteiro (sem deslogar) e a turma só troca para quem está sem grupo.
+   - [x] **3c. Tirar um aluno da Física** (`DELETE /admin/fisicas/:fisicaId/alunos/:alunoId`), em cascata: ele sai do grupo, e o grupo é apagado se ele era o último integrante. Responde o grupo como ficou (ou `null`). O cadastro continua.
+   - [x] **3d. Exportar as planilhas** (botão nas telas ListaAlunos e ListaGrupos): feito pelo **front**, a partir do `GET /admin/alunos`, sem rota no back. Dois formatos, com uma aba por Física: alunos (com grupo e status) e grupos (cada grupo com os integrantes, e os alunos sem grupo no fim). Ver [alunos.md](alunos.md#exportar-as-planilhas-front).
 
 ## Front-end
 

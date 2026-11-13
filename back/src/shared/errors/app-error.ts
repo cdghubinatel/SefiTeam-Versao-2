@@ -124,6 +124,38 @@ export class SemestreExistente extends AppError {
   }
 }
 
+/** O aluno já está inscrito nesta Física (cada aluno tem uma inscrição por Física). */
+export class JaInscrito extends AppError {
+  constructor() {
+    super(409, 'JA_INSCRITO', 'Este aluno já está nesta Física.');
+  }
+}
+
+/** A Física não comporta mais um aluno: todos precisam caber nos grupos (grupos × máximo). */
+export class FisicaLotada extends AppError {
+  constructor(quantidadeGrupos: number, maximoIntegrantes: number) {
+    super(
+      409,
+      'FISICA_LOTADA',
+      `A Física já tem ${quantidadeGrupos * maximoIntegrantes} alunos, o que cabe em ${quantidadeGrupos} grupos de até ${maximoIntegrantes} integrantes.`,
+    );
+  }
+}
+
+/** Trocar a turma de um aluno que está num grupo misturaria turmas; ele sai do grupo antes. */
+export class AlunoEmGrupo extends AppError {
+  constructor() {
+    super(409, 'ALUNO_EM_GRUPO', 'Tire o aluno do grupo antes de trocar a turma.');
+  }
+}
+
+/** O curso + matrícula novos geram um login que já é de outro cadastro. */
+export class LoginExistente extends AppError {
+  constructor(login: string) {
+    super(409, 'LOGIN_EXISTENTE', `Já existe um cadastro com o login ${login}.`);
+  }
+}
+
 export class MuitasTentativas extends AppError {
   constructor() {
     super(429, 'MUITAS_TENTATIVAS', 'Muitas tentativas. Aguarde um pouco e tente novamente.');

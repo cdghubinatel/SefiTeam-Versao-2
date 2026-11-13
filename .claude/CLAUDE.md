@@ -45,6 +45,7 @@ npm run typecheck && npm run lint && npm run format:check
 npm run db:migrate       # nova migration / aplicar no banco local
 npm run db:seed          # admin a partir de ADMIN_LOGIN / ADMIN_SENHA
 npm run db:seed:demo     # edições DEMO (ativa) e DEMO 2025/1, 2025/2 (finalizadas), 40 alunos e grupos (teste manual)
+npm run simular          # simula alunos e admin usando a API de dev no ar (86 passos); recria o seed no fim
 ```
 
 Convenções:

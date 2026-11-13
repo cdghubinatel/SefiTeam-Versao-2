@@ -11,6 +11,7 @@ import { z } from 'zod';
 import { env } from './config/env.js';
 import { authRoutes } from './modules/auth/routes.js';
 import { duvidasRoutes } from './modules/duvidas/routes.js';
+import { alunosRoutes } from './modules/alunos/routes.js';
 import { edicoesRoutes } from './modules/edicoes/routes.js';
 import { gruposRoutes } from './modules/grupos/routes.js';
 import auth from './plugins/auth.js';
@@ -69,6 +70,7 @@ export async function buildApp(opcoes: FastifyServerOptions = {}) {
   await app.register(duvidasRoutes, { prefix: '/duvidas' });
   await app.register(gruposRoutes);
   await app.register(edicoesRoutes, { prefix: '/admin' });
+  await app.register(alunosRoutes, { prefix: '/admin' });
 
   return app;
 }
