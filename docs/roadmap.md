@@ -37,7 +37,7 @@ O front-end só começa quando o back-end estiver finalizado. Ordem combinada:
    - Pendências de design do assistente e da gestão de edições em [pendencias-design.md](pendencias-design.md#edições-admin).
 3. **Alunos (admin)** (tela `Admin/ListaAlunos`, ver [alunos.md](alunos.md)), em quatro partes. A tela mostra só a edição atual (a última criada, ativa ou não), com uma linha por aluno em cada Física.
    - [x] **3a. Lista de alunos** (`GET /admin/alunos`): busca sem acentos por nome ou matrícula, filtros por Física e por status (`formado`, `nao-formado`, `sem-grupo`), sem paginação. Traz o número do grupo, para o front exportar a planilha.
-   - [ ] **3b. Adicionar e editar um aluno** (matrícula, curso, nome, Física e turma), fora da planilha. Trocar de turma não é possível depois que a escolha de grupo acontece.
+   - [x] **3b. Adicionar e editar um aluno** (`POST /admin/fisicas/:fisicaId/alunos` e `PUT /admin/fisicas/:fisicaId/alunos/:alunoId`), fora da planilha, só na edição atual. Aluno já cadastrado (curso + matrícula) é reaproveitado, com nome e senha atualizados; turma só das existentes; a Física não passa da capacidade (grupos × máximo). Na edição, nome, curso e matrícula valem para o cadastro inteiro (sem deslogar) e a turma só troca para quem está sem grupo.
    - [ ] **3c. Tirar um aluno da edição**, em cascata: ele sai do grupo, e o grupo é apagado se ele era o último integrante.
    - [ ] **3d. Exportar a planilha de grupos**, feita pelo front com os dados que a API já devolve (botão nas telas ListaAlunos e ListaGrupos). Falta definir o formato da planilha.
 
