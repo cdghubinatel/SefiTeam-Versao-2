@@ -4,7 +4,7 @@ A tela `Admin/ListaAlunos` mostra os alunos da edição, com busca e filtros. De
 
 Código em `back/src/modules/alunos/`. Tabelas `usuario`, `inscricao`, `turma`, `fisica` e `grupo` ([modelo-banco.md](modelo-banco.md)).
 
-> Pronto no back-end: a lista (`GET /admin/alunos`), adicionar (`POST /admin/fisicas/:fisicaId/alunos`) e editar (`PUT /admin/fisicas/:fisicaId/alunos/:alunoId`). Faltam tirar da edição e exportar ([roadmap](roadmap.md#próximos-passos-back-end)). O que falta no Figma está em [pendencias-design.md](pendencias-design.md#alunos-admin).
+> Pronto no back-end: a lista (`GET /admin/alunos`), adicionar (`POST /admin/fisicas/:fisicaId/alunos`), editar (`PUT /admin/fisicas/:fisicaId/alunos/:alunoId`) e tirar da Física (`DELETE /admin/fisicas/:fisicaId/alunos/:alunoId`). Exportar as planilhas é feito pelo front, com a lista ([Exportar](#exportar-as-planilhas-front)). O que falta no Figma está em [pendencias-design.md](pendencias-design.md#alunos-admin).
 
 ## Regras
 
@@ -17,19 +17,19 @@ Decisões de 2026-11-03:
   - **Não formado**: está num grupo abaixo do mínimo;
   - **Sem grupo**: não está em nenhum grupo.
 - Os botões Curso, Turma, Física e Status do grupo, acima da tabela, **mostram ou escondem colunas**. Isso é coisa só do front: a API sempre devolve todos os campos.
-- **Exportar a planilha de grupos** é feito no front, como a leitura da planilha. A lista traz o que ele precisa, inclusive o número do grupo.
+- **Exportar as planilhas** é feito no front, como a leitura da planilha, a partir da lista ([formatos abaixo](#exportar-as-planilhas-front)). Não há rota própria.
 - **Adicionar e editar** valem só na edição atual (Física de outra edição dá `404`) e sem prazo: o admin age mesmo depois da data limite.
 - **Trocar de turma** só para quem está sem grupo naquela Física. Aluno em grupo recebe `409 ALUNO_EM_GRUPO`, e o admin precisa tirá-lo do grupo antes, senão um grupo sem multiturma ficaria com turmas misturadas.
-- Regra da próxima parte, já combinada:
-  - **Tirar um aluno da edição** age em cascata: ele sai do grupo, e o grupo é apagado se ele era o último integrante, como na [remoção de integrante](grupos.md).
+- **Tirar um aluno** (lixeira da linha) tira o aluno **daquela Física**, em cascata: ele sai do grupo, e o grupo é apagado se ele era o último integrante, como na [remoção de integrante](grupos.md). O **cadastro continua** (login e senha), mesmo sem nenhuma inscrição: se ele voltar numa planilha ou for adicionado de novo, é reaproveitado.
 
 ## Rotas
 
-| Método | Rota                                       | Acesso | Resposta                         |
-| ------ | ------------------------------------------ | ------ | -------------------------------- |
-| GET    | `/admin/alunos`                            | ADMIN  | `200` lista; `400`; `404`        |
-| POST   | `/admin/fisicas/:fisicaId/alunos`          | ADMIN  | `201` linha; `400`; `404`; `409` |
-| PUT    | `/admin/fisicas/:fisicaId/alunos/:alunoId` | ADMIN  | `200` linha; `400`; `404`; `409` |
+| Método | Rota                                       | Acesso | Resposta                          |
+| ------ | ------------------------------------------ | ------ | --------------------------------- |
+| GET    | `/admin/alunos`                            | ADMIN  | `200` lista; `400`; `404`         |
+| POST   | `/admin/fisicas/:fisicaId/alunos`          | ADMIN  | `201` linha; `400`; `404`; `409`  |
+| PUT    | `/admin/fisicas/:fisicaId/alunos/:alunoId` | ADMIN  | `200` linha; `400`; `404`; `409`  |
+| DELETE | `/admin/fisicas/:fisicaId/alunos/:alunoId` | ADMIN  | `200` grupo afetado; `400`; `404` |
 
 ### `GET /admin/alunos`
 
@@ -108,10 +108,43 @@ Erros, na ordem em que são checados:
 4. `409 ALUNO_EM_GRUPO`: "Tire o aluno do grupo antes de trocar a turma."
 5. `409 LOGIN_EXISTENTE`: "Já existe um cadastro com o login GES589." (de outro aluno ou de um admin).
 
+### `DELETE /admin/fisicas/:fisicaId/alunos/:alunoId`
+
+Lixeira da linha (modal "Confirmar Deletar o Aluno?"). Tira o aluno desta Física; nas outras Físicas ele continua.
+
+```json
+{
+  "grupo": {
+    "id": 55,
+    "numero": 2,
+    "fisicaId": 101,
+    "formado": false,
+    "integrantes": []
+  }
+}
+```
+
+- `grupo` é o grupo em que o aluno estava, como ficou depois da saída (no mesmo formato das rotas de grupos). Ele pode ficar **abaixo do mínimo**, como na remoção de integrante.
+- `grupo: null` quando o aluno não tinha grupo, ou quando era o último integrante e o grupo foi **apagado**. Os outros grupos não são renumerados.
+- O cadastro do aluno não é apagado.
+- `404 NAO_ENCONTRADO`: Física inexistente ou de outra edição ("Física não encontrada."); aluno que não está nesta Física ("Aluno não encontrado nesta Física.").
+
 ### Concorrência
 
 Adicionar e editar rodam numa transação que começa com `travarFisica`, como as ações de grupo ([grupos.md](grupos.md#concorrência)):
 
 - dois admins adicionando alunos na última vaga: um entra, o outro recebe `FISICA_LOTADA`;
 - o aluno entra num grupo enquanto o admin troca a turma dele: só uma das duas ações passa;
+- os dois últimos integrantes de um grupo removidos ao mesmo tempo: o grupo é apagado uma vez, sem erro;
+- clique duplo na lixeira: o aluno sai uma vez, e o segundo clique recebe `404`;
+- o aluno entra num grupo enquanto o admin o remove: ele nunca fica num grupo sem inscrição;
 - duas edições ao mesmo tempo, em Físicas diferentes, levando ao mesmo login: uma recebe `LOGIN_EXISTENTE` (o índice único do login decide, porque cada uma trava só a própria Física).
+
+## Exportar as planilhas (front)
+
+Os botões "Exportar Planilha de Grupos" (telas ListaAlunos e ListaGrupos) geram o `.xlsx` **no navegador**, a partir do `GET /admin/alunos` sem filtros (decisão de 2026-11-12: sem rota própria no back). Cada linha da lista já traz curso, matrícula, nome, Física, turma, grupo (número) e status. São dois formatos, os dois com **uma aba por Física** (nome da aba = código da Física, como na planilha de entrada):
+
+1. **Alunos**: uma linha por aluno, com as colunas Curso, Matricula, Aluno, Turma, Grupo (número; vazio se sem grupo) e Status (Formado, Não formado, Sem grupo).
+2. **Grupos**: os grupos em ordem de número, cada um com os seus integrantes (agrupando as linhas pelo `grupo.numero`), e no fim os **alunos sem grupo** (`grupo: null`).
+
+As colunas e a aparência exatas ficam para o front, junto com o design.
