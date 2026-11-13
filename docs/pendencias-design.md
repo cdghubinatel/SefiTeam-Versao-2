@@ -59,4 +59,7 @@ Regras em [grupos.md](grupos.md).
 
 ## Alunos (admin)
 
+- [ ] **Status "Sem grupo"** (`Admin/ListaAlunos`): a coluna e o filtro "Status de grupo" têm só Formado e Não formado. A API separa três: **Formado** (grupo atingiu o mínimo), **Não formado** (grupo abaixo do mínimo) e **Sem grupo** (aluno sem grupo), para o professor achar quem falta alocar.
+- [ ] **Botões de coluna** (Curso, Turma, Física, Status do grupo): mostram ou escondem colunas da tabela. No print, "Status do grupo" aparece desmarcado com a coluna visível; falta o estado de coluna escondida.
+- [ ] **Edição mostrada na lista**: a tela mostra só a edição atual (a última criada, ativa ou não). Vale escrever o semestre no subtítulo (ex.: "Edição 2026/2").
 - [ ] **Campo e-mail nos modais "Adicionar Aluno" e "Editar Aluno"** (`Admin/ListaAlunos`): a planilha não traz e-mail e o sistema não usa e-mail (login = curso + matrícula). Remover o campo.

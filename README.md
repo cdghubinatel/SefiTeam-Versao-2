@@ -37,6 +37,7 @@ O professor (admin) cria uma **edição** da feira e faz upload de uma planilha 
 ├── front/               # SPA (Vite + React)
 ├── docs/
 │   ├── modelo-banco.md  # Modelo de dados e regras
+│   ├── alunos.md        # Lista de alunos do admin
 │   ├── autenticacao.md  # Login, token e permissões
 │   ├── duvidas-frequentes.md  # Rotas e regras das dúvidas frequentes
 │   ├── edicoes.md       # Criar a edição a partir da planilha
@@ -69,6 +70,7 @@ cd front
 ## Documentação
 
 - [Modelo do banco de dados](docs/modelo-banco.md)
+- [Alunos (admin)](docs/alunos.md)
 - [Autenticação e autorização](docs/autenticacao.md)
 - [Dúvidas frequentes](docs/duvidas-frequentes.md)
 - [Edições](docs/edicoes.md)

@@ -36,7 +36,7 @@ back/
 │       ├── auth/           # Login, sessão
 │       ├── edicoes/        # Criar edição (planilha lida pelo front), lista e dashboard do admin
 │       ├── fisicas/
-│       ├── alunos/
+│       ├── alunos/         # Lista de alunos do admin (Admin/ListaAlunos)
 │       ├── grupos/         # Criar, entrar, remover, exportar
 │       └── duvidas/        # Dúvidas Frequentes
 └── .env.example

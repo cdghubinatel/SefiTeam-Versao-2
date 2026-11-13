@@ -35,11 +35,11 @@ O front-end só começa quando o back-end estiver finalizado. Ordem combinada:
    - Alunos novos são cadastrados com `loginDoAluno({ curso, matricula })` e a senha `senhaDoAluno({ nome })`. Alunos já cadastrados em edições anteriores (mesmo curso + matrícula) são reaproveitados, atualizando o nome e a senha, sem deslogar.
    - A edição **não é editável depois de criada** nesta etapa (nem prazo, nem configuração, nem planilha).
    - Pendências de design do assistente e da gestão de edições em [pendencias-design.md](pendencias-design.md#edições-admin).
-3. **Alunos (admin)**, em branch própria: listagem completa de alunos (tela `Admin/ListaAlunos`, com busca e filtros por Física e status do grupo). A planejar, com as perguntas de negócio de cada ação (o Figma `Admin/ListaAlunos` já tem as telas):
-   - Adicionar um aluno à edição manualmente (matrícula, curso, nome, Física e turma), fora da planilha.
-   - Editar um aluno, inclusive a turma (e se ele já estiver num grupo sem multiturma?).
-   - Tirar um aluno da edição ("não estará mais presente nessa edição"; e se ele for o último integrante de um grupo?).
-   - Exportar a planilha de grupos (botão nas duas telas).
+3. **Alunos (admin)** (tela `Admin/ListaAlunos`, ver [alunos.md](alunos.md)), em quatro partes. A tela mostra só a edição atual (a última criada, ativa ou não), com uma linha por aluno em cada Física.
+   - [x] **3a. Lista de alunos** (`GET /admin/alunos`): busca sem acentos por nome ou matrícula, filtros por Física e por status (`formado`, `nao-formado`, `sem-grupo`), sem paginação. Traz o número do grupo, para o front exportar a planilha.
+   - [ ] **3b. Adicionar e editar um aluno** (matrícula, curso, nome, Física e turma), fora da planilha. Trocar de turma não é possível depois que a escolha de grupo acontece.
+   - [ ] **3c. Tirar um aluno da edição**, em cascata: ele sai do grupo, e o grupo é apagado se ele era o último integrante.
+   - [ ] **3d. Exportar a planilha de grupos**, feita pelo front com os dados que a API já devolve (botão nas telas ListaAlunos e ListaGrupos). Falta definir o formato da planilha.
 
 ## Front-end
 
