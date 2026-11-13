@@ -9,12 +9,20 @@ import {
   NaoEncontrado,
 } from '../../shared/errors/app-error.js';
 import { hashDaSenhaDoAluno, loginDoAluno, senhaDoAluno } from '../auth/service.js';
-import { travarFisica } from '../grupos/service.js';
+import { lerGrupo, travarFisica } from '../grupos/service.js';
 import { statusDoAluno } from './regras.js';
-import type { AlunoBody, AlunoDaEdicao, AlunosDaEdicao, AlunosDaEdicaoQuery } from './schemas.js';
+import type {
+  AlunoBody,
+  AlunoDaEdicao,
+  AlunosDaEdicao,
+  AlunosDaEdicaoQuery,
+  RemocaoDoAluno,
+} from './schemas.js';
 
 type Deps = { prisma: Pick<PrismaClient, 'edicao' | 'fisica' | 'inscricao' | '$queryRaw'> };
-type DepsComTransacao = { prisma: Pick<PrismaClient, '$transaction' | 'inscricao'> };
+type DepsComTransacao = {
+  prisma: Pick<PrismaClient, '$transaction' | 'inscricao' | 'grupo'>;
+};
 type Transacao = Prisma.TransactionClient;
 
 /** Inscrição → linha da lista (o aluno numa Física). */
@@ -329,4 +337,42 @@ export async function editarAluno(
     throw erro;
   }
   return linhaDoAluno(prisma, alunoId, fisicaId);
+}
+
+/**
+ * O admin tira o aluno de uma Física da edição atual (a lixeira da linha). Em cascata: se ele
+ * estava num grupo, sai dele, e o grupo é apagado quando ele era o último integrante (os outros
+ * grupos não são renumerados). O grupo pode ficar abaixo do mínimo, como na remoção de
+ * integrante. O cadastro (login e senha) continua, mesmo sem nenhuma inscrição: se o aluno
+ * voltar, é reaproveitado. Ver docs/alunos.md.
+ */
+export async function removerAlunoDaFisica(
+  { prisma }: DepsComTransacao,
+  fisicaId: number,
+  alunoId: number,
+): Promise<RemocaoDoAluno> {
+  const grupoId = await prisma.$transaction(async (tx) => {
+    await travarFisica(tx, fisicaId);
+    await fisicaDaEdicaoAtual(tx, fisicaId);
+    const inscricao = await tx.inscricao.findUnique({
+      where: { alunoId_fisicaId: { alunoId, fisicaId } },
+      select: { grupoId: true },
+    });
+    if (!inscricao) {
+      throw new NaoEncontrado('Aluno não encontrado nesta Física.');
+    }
+
+    await tx.inscricao.delete({ where: { alunoId_fisicaId: { alunoId, fisicaId } } });
+    if (inscricao.grupoId === null) {
+      return null;
+    }
+    const restantes = await tx.inscricao.count({ where: { grupoId: inscricao.grupoId } });
+    if (restantes === 0) {
+      await tx.grupo.delete({ where: { id: inscricao.grupoId } });
+      return null;
+    }
+    return inscricao.grupoId;
+  });
+
+  return { grupo: grupoId === null ? null : await lerGrupo(prisma, grupoId) };
 }

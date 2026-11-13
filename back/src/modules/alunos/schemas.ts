@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { alunoDaPlanilhaSchema } from '../edicoes/schemas.js';
+import { grupoSchema } from '../grupos/schemas.js';
 
 const id = z.coerce.number().int().positive();
 
@@ -62,6 +63,15 @@ export const alunoNaFisicaParamsSchema = z.object({ fisicaId: id, alunoId: id })
  */
 export const alunoBodySchema = alunoDaPlanilhaSchema;
 
+export const remocaoDoAlunoSchema = z.object({
+  /**
+   * Grupo em que o aluno estava, como ficou depois da saída (pode ficar abaixo do mínimo), ou
+   * `null`: o aluno não tinha grupo, ou era o último integrante e o grupo foi apagado.
+   */
+  grupo: grupoSchema.nullable(),
+});
+
+export type RemocaoDoAluno = z.infer<typeof remocaoDoAlunoSchema>;
 export type AlunoDaEdicao = z.infer<typeof alunoDaEdicaoSchema>;
 export type AlunoBody = z.infer<typeof alunoBodySchema>;
 export type AlunosDaEdicaoQuery = z.infer<typeof alunosDaEdicaoQuerySchema>;

@@ -64,6 +64,18 @@ function paraGrupo(grupo: GrupoComIntegrantes): Grupo {
 }
 
 /**
+ * Grupo no formato das respostas, ou `null` se ele não existe mais. Também usado pelo módulo de
+ * alunos, que lê o grupo depois do commit.
+ */
+export async function lerGrupo(
+  prisma: Pick<PrismaClient, 'grupo'>,
+  grupoId: number,
+): Promise<Grupo | null> {
+  const grupo = await prisma.grupo.findUnique({ where: { id: grupoId }, select: selectGrupo });
+  return grupo && paraGrupo(grupo);
+}
+
+/**
  * Inscrição do aluno numa Física da edição ativa. Física inexistente, de outra edição
  * ou em que o aluno não está inscrito dão o mesmo 404 (`mensagem404` muda só o texto:
  * nas rotas por grupo, o aluno também não deve distinguir os casos).

@@ -7,8 +7,14 @@ import {
   alunosDaEdicaoQuerySchema,
   alunosDaEdicaoSchema,
   fisicaParamsSchema,
+  remocaoDoAlunoSchema,
 } from './schemas.js';
-import { adicionarAluno, editarAluno, listarAlunosDaEdicao } from './service.js';
+import {
+  adicionarAluno,
+  editarAluno,
+  listarAlunosDaEdicao,
+  removerAlunoDaFisica,
+} from './service.js';
 
 const somenteAdmin = { papeis: ['ADMIN' as const] };
 
@@ -91,5 +97,27 @@ export const alunosRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request) =>
       editarAluno(deps, request.params.fisicaId, request.params.alunoId, request.body),
+  );
+
+  app.delete(
+    '/fisicas/:fisicaId/alunos/:alunoId',
+    {
+      config: somenteAdmin,
+      schema: {
+        tags: ['alunos'],
+        summary: 'Tira um aluno de uma Física',
+        description:
+          'Lixeira da linha em `Admin/ListaAlunos` (modal "Confirmar Deletar o Aluno?"), só na edição atual e sem prazo. Em cascata: o aluno sai do grupo, e o grupo é apagado se ele era o último integrante (os outros não são renumerados). Responde o grupo como ficou (pode ficar abaixo do mínimo), ou `grupo: null` se o aluno não tinha grupo ou se o grupo foi apagado. O cadastro (login e senha) continua. `404` se a Física não existe, é de outra edição ou o aluno não está nela.',
+        params: alunoNaFisicaParamsSchema,
+        response: {
+          200: remocaoDoAlunoSchema,
+          400: erroSchema,
+          401: erroSchema,
+          403: erroSchema,
+          404: erroSchema,
+        },
+      },
+    },
+    async (request) => removerAlunoDaFisica(deps, request.params.fisicaId, request.params.alunoId),
   );
 };
