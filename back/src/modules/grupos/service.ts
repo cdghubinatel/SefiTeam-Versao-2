@@ -216,11 +216,12 @@ export async function listarColegasDisponiveis(
 }
 
 /**
- * Trava a linha da Física até o fim da transação. Toda ação que altera grupos chama isto
- * primeiro, então as ações de uma mesma Física rodam uma de cada vez e as contagens
- * (integrantes, grupos, número livre) não ficam desatualizadas (ver docs/grupos.md).
+ * Trava a linha da Física até o fim da transação. Toda ação que altera grupos ou inscrições
+ * chama isto primeiro, então as ações de uma mesma Física rodam uma de cada vez e as contagens
+ * (integrantes, grupos, número livre, alunos inscritos) não ficam desatualizadas (ver
+ * docs/grupos.md). Também usada pelo módulo de alunos.
  */
-async function travarFisica(tx: Transacao, fisicaId: number) {
+export async function travarFisica(tx: Transacao, fisicaId: number) {
   await tx.$queryRaw`SELECT id FROM fisica WHERE id = ${fisicaId} FOR UPDATE`;
 }
 

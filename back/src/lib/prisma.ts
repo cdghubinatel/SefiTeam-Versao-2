@@ -19,3 +19,8 @@ export function escaparLike(texto: string) {
 export function ehRegistroInexistente(erro: unknown) {
   return erro instanceof Prisma.PrismaClientKnownRequestError && erro.code === 'P2025';
 }
+
+/** Violou um índice único (código P2002), ex.: dois cadastros gravando o mesmo login ao mesmo tempo. */
+export function ehValorRepetido(erro: unknown) {
+  return erro instanceof Prisma.PrismaClientKnownRequestError && erro.code === 'P2002';
+}

@@ -1,11 +1,28 @@
 import { z } from 'zod';
+import { alunoDaPlanilhaSchema } from '../edicoes/schemas.js';
+
+const id = z.coerce.number().int().positive();
 
 export const alunosDaEdicaoQuerySchema = z.object({
   /** Parte do nome ou da matrícula, sem diferenciar maiúsculas nem acentos. Vazio = todos. */
   busca: z.string().trim().max(100).optional(),
-  fisicaId: z.coerce.number().int().positive().optional(),
+  fisicaId: id.optional(),
   /** Formado = num grupo que atingiu o mínimo; não formado = num grupo abaixo dele. */
   status: z.enum(['formado', 'nao-formado', 'sem-grupo']).optional(),
+});
+
+/** Uma linha da lista: o aluno numa Física. O `id` do aluno e o `fisica.id` identificam a linha. */
+export const alunoDaEdicaoSchema = z.object({
+  id: z.number().int(),
+  nome: z.string(),
+  curso: z.string().nullable(),
+  matricula: z.string().nullable(),
+  fisica: z.object({ id: z.number().int(), codigo: z.string() }),
+  /** Código da turma na Física (ex.: "A"). */
+  turma: z.string(),
+  /** Grupo do aluno nesta Física, ou `null`. O número serve para exportar a planilha. */
+  grupo: z.object({ id: z.number().int(), numero: z.number().int() }).nullable(),
+  status: z.enum(['formado', 'nao-formado', 'sem-grupo']),
 });
 
 export const alunosDaEdicaoSchema = z.object({
@@ -30,23 +47,22 @@ export const alunosDaEdicaoSchema = z.object({
   ),
   /**
    * Uma linha por aluno em cada Física (quem está em duas aparece duas vezes), em ordem de nome
-   * e de código da Física. O `id` do aluno e o `fisica.id` identificam a linha.
+   * e de código da Física.
    */
-  alunos: z.array(
-    z.object({
-      id: z.number().int(),
-      nome: z.string(),
-      curso: z.string().nullable(),
-      matricula: z.string().nullable(),
-      fisica: z.object({ id: z.number().int(), codigo: z.string() }),
-      /** Código da turma na Física (ex.: "A"). */
-      turma: z.string(),
-      /** Grupo do aluno nesta Física, ou `null`. O número serve para exportar a planilha. */
-      grupo: z.object({ id: z.number().int(), numero: z.number().int() }).nullable(),
-      status: z.enum(['formado', 'nao-formado', 'sem-grupo']),
-    }),
-  ),
+  alunos: z.array(alunoDaEdicaoSchema),
 });
 
+export const fisicaParamsSchema = z.object({ fisicaId: id });
+
+export const alunoNaFisicaParamsSchema = z.object({ fisicaId: id, alunoId: id });
+
+/**
+ * Corpo de adicionar e de editar: os mesmos campos e a mesma normalização de uma linha da
+ * planilha (curso e matrícula sem espaços e em maiúsculas; a turma em maiúsculas).
+ */
+export const alunoBodySchema = alunoDaPlanilhaSchema;
+
+export type AlunoDaEdicao = z.infer<typeof alunoDaEdicaoSchema>;
+export type AlunoBody = z.infer<typeof alunoBodySchema>;
 export type AlunosDaEdicaoQuery = z.infer<typeof alunosDaEdicaoQuerySchema>;
 export type AlunosDaEdicao = z.infer<typeof alunosDaEdicaoSchema>;
