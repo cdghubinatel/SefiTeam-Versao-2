@@ -13,7 +13,7 @@ O que já está pronto e o que vem a seguir. Atualize este arquivo quando uma et
 
 O front-end só começa quando o back-end estiver finalizado. Ordem combinada:
 
-> Em 2026-11-12, as três etapas abaixo estão prontas: o back-end tem todas as rotas das telas do Figma. Fora do código, faltam as decisões de deploy ([Decisões em aberto](#decisões-em-aberto)) e, se o grupo quiser, finalizar uma edição sem criar outra ([pendencias-design.md](pendencias-design.md#gerenciar-edições)).
+> Em 2026-11-12, as três etapas abaixo estão prontas: o back-end tem todas as rotas das telas do Figma. Fora do código, faltam as decisões de deploy ([Decisões em aberto](#decisões-em-aberto)). Finalizar uma edição sem criar outra **não será feito** (decisão de 2026-11-13): a edição ativa só é finalizada quando a próxima é criada. Para conferir a API de ponta a ponta, `npm run simular` (ver [back/README.md](../back/README.md)).
 
 1. **Grupos** (pronto no back-end, ver [grupos.md](grupos.md))
    - [x] Leitura do aluno: minhas Físicas (dashboard), grupos em que pode entrar, colegas disponíveis (busca sem acentos). Seed de demonstração (`npm run db:seed:demo`).
